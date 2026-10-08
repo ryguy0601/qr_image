@@ -1,191 +1,699 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<link rel="stylesheet" href="index.css" />
-		<link
-			rel="stylesheet"
-			href="https://www.w3schools.com/w3css/4/w3.css"
-		/>
-		<link
-			rel="stylesheet"
-			href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
-		/>
-		<link rel="icon" href="./images/demo_squid.png" />
-	</head>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>QR Generator</title>
 
-	<title>QRImage</title>
-	<body>
-		<div style="width: 50%; margin: 0 auto">
-			<div class="center">
-				<h1>QRImage</h1>
-			</div>
+	<!-- Bootstrap 5 CSS -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+	<!-- Font Awesome 4.7 -->
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 
-			<div class="center">
-				<h3>QRImage is a web app to generate QR codes with images.</h3>
-			</div>
+	<style>
+		.qr-dropzone {
+			cursor: pointer;
+			transition: all 0.2s ease-in-out;
+		}
 
-			<div class="center">
-				<a
-					href="https://www.youtube.com/watch?v=hA4TKV2Lbx8"
-					target="_blank"
-					><i
-						class="fa fa-youtube-play"
-						style="font-size: 36px; color: red"
-					></i
-				></a>
+			.qr-dropzone.drag-over {
+				border-color: var(--bs-primary, #0d6efd) !important;
+				background-color: rgba(13, 110, 253, 0.08) !important;
+			}
 
-				<a href="https://github.com/hughchen/qr_image" target="_blank"
-					><i class="fa fa-github" style="font-size: 36px"></i
-				></a>
-			</div>
+		.cursor-pointer {
+			cursor: pointer;
+		}
 
-			<br />
+		.qr-checkerboard {
+			background-color: #f8f9fa;
+			background-image: linear-gradient(45deg, #e9ecef 25%, transparent 25%), linear-gradient(-45deg, #e9ecef 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e9ecef 75%), linear-gradient(-45deg, transparent 75%, #e9ecef 75%);
+			background-size: 16px 16px;
+			background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+		}
 
-			<label>Image File (optional):</label>
-			<input type="file" id="imageLoader" name="imageLoader" />
-			<p>
-				Works better for square images (use an
-				<a href="https://www.online-image-editor.com/">editor</a> as
-				needed).
-			</p>
+		.qr-preview-area {
+			min-height: 320px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 1.5rem;
+			background-color: #fcfcfc;
+		}
 
-			<div class="center">
-				<canvas id="imageCanvas"></canvas>
-			</div>
+		.qr-output-box canvas {
+			max-width: 100%;
+			height: auto;
+			display: block;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+			border-radius: 4px;
+		}
 
-			<label>URL*:</label>
-			<input class="w3-input" id="text" type="text" />
+		.qr-sticky-pane {
+			position: sticky;
+			top: 1.5rem;
+		}
+	</style>
+</head>
+<body class="bg-light">
 
-			<br />
+	<div class="qr-view">
+		<div class="container py-4">
 
-			<!-- <p>Bit size: <span id="printSize"></span></p> -->
-
-			<div class="tooltip">
-				Bit size:
-				<span class="tooltiptext"
-					>Larger sizes hide more of the image, but are easier to
-					scan. I found that a size of 30 works well.</span
-				>
-				<span id="printSize"></span>
-			</div>
-
-			<br /><br />
-
-			<div class="slidecontainer">
-				<input
-					type="range"
-					min="10"
-					max="100"
-					value="30"
-					class="slider"
-					id="radiusSize"
-				/>
-			</div>
-
-			<br />
-
-			<div class="tooltip">
-				Error Correction:
-				<span class="tooltiptext"
-					>Higher level of error correction makes bigger qr codes, but
-					also allows you to hide more of the QR code. The former is
-					more relevant to this app.</span
-				>
-				<span id="printCorrection"></span>
-			</div>
-
-			<br /><br />
-
-			<div class="slidecontainer">
-				<input
-					type="range"
-					min="1"
-					max="3"
-					value="3"
-					class="slider"
-					id="errorCorrection"
-				/>
-			</div>
-
-			<br />
-
-			<div class="tooltip">
-				Border Size:
-				<span class="tooltiptext"
-					>Size of white border around QR code. Typically need some
-					border around the code, but depending on your use case you
-					can get rid of it.</span
-				>
-				<span id="printBorderSize"></span>
-			</div>
-
-			<br /><br />
-
-			<div class="slidecontainer">
-				<input
-					type="range"
-					min="0"
-					max="5"
-					value="0"
-					class="slider"
-					id="borderSize"
-				/>
-			</div>
-
-			<br />
-
-			<input
-				type="checkbox"
-				id="whitebackground"
-				name="whitebackground"
-			/>
-			<label for="whitebackground">White background</label><br />
-
-			<br />
-
-			<div class="center">
-				<button
-					class="w3-button w3-white w3-border w3-border-blue"
-					style="margin: 0 auto"
-					onclick="makeCode()"
-				>
-					Generate QR code
+			<!-- Top Header -->
+			<div class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom">
+				<div>
+					<h1 class="h4 mb-1">
+						<i class="fa fa-qrcode text-primary me-2" aria-hidden="true"></i>
+						QR Generator
+					</h1>
+					<p class="text-muted small mb-0">Create crisp, scannable QR codes with custom styling.</p>
+				</div>
+				<button type="button" class="btn btn-outline-secondary btn-sm" id="btn-reset">
+					<i class="fa fa-undo me-1" aria-hidden="true"></i>
+					Reset Style
 				</button>
 			</div>
 
-			<br />
+			<div class="row g-4">
 
-			<div class="center">
-				<canvas id="myCanvas"></canvas>
+				<!-- Controls Column -->
+				<div class="col-lg-7">
+					<div class="d-flex flex-column gap-3">
+
+						<!-- URL / Content Input -->
+						<div class="card p-3 shadow-sm border-0">
+							<label for="qr-url" class="form-label small fw-semibold text-muted mb-2">URL or Payload</label>
+							<div class="input-group">
+								<input id="qr-url"
+									   class="form-control"
+									   type="url"
+									   placeholder="https://example.com"
+									   autocomplete="off"
+									   spellcheck="false" />
+								<button class="btn btn-primary" type="button" id="btn-generate" disabled>
+									<i class="fa fa-bolt me-1" aria-hidden="true"></i>
+									Generate
+								</button>
+							</div>
+							<div id="error-alert" class="alert alert-danger small mt-2 mb-0 py-2 d-none" role="alert">
+								<i class="fa fa-exclamation-triangle me-1" aria-hidden="true"></i>
+								<span id="error-message"></span>
+							</div>
+						</div>
+
+						<!-- Background Image -->
+						<div class="card p-3 shadow-sm border-0">
+							<div class="d-flex justify-content-between align-items-center mb-2">
+								<span class="small fw-semibold text-muted">Background Image</span>
+								<span class="text-muted small">PNG, JPG, SVG (&lt;5 MB)</span>
+							</div>
+
+							<!-- Dropzone Empty State -->
+							<div id="dropzone-empty" class="qr-dropzone position-relative d-flex flex-column align-items-center justify-content-center p-4 border border-2 border-dashed rounded text-center" style="min-height: 120px;">
+								<input id="qr-image"
+									   type="file"
+									   class="position-absolute top-0 start-0 w-100 h-100 opacity-0 cursor-pointer"
+									   style="z-index: 5;"
+									   accept="image/*" />
+								<div class="d-flex flex-column align-items-center" style="pointer-events: none;">
+									<i id="drop-icon" class="fa fa-cloud-upload fa-2x mb-2 text-muted" aria-hidden="true"></i>
+									<span id="drop-text" class="small text-muted">Click or drop image to embed behind QR</span>
+								</div>
+							</div>
+
+							<!-- File Selected State -->
+							<div id="file-selected-box" class="d-flex justify-content-between align-items-center p-2 rounded border bg-light d-none">
+								<span class="small text-truncate me-2" id="image-name-display">
+									<i class="fa fa-image text-primary me-2" aria-hidden="true"></i>
+									<span id="image-name-text"></span>
+								</span>
+								<div class="btn-group btn-group-sm">
+									<label for="qr-image-replace" class="btn btn-outline-secondary cursor-pointer mb-0" title="Change">
+										<i class="fa fa-pencil" aria-hidden="true"></i>
+									</label>
+									<input id="qr-image-replace" type="file" class="d-none" accept="image/*" />
+									<button type="button" class="btn btn-outline-danger" title="Remove" id="btn-clear-image">
+										<i class="fa fa-times" aria-hidden="true"></i>
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<!-- Colors & Contrast -->
+						<div class="card p-3 shadow-sm border-0">
+							<div class="small fw-semibold text-muted mb-3 pb-2 border-bottom">
+								<i class="fa fa-paint-brush me-1" aria-hidden="true"></i>
+								Colors & Contrast
+							</div>
+
+							<div class="d-flex flex-wrap align-items-center gap-3">
+								<label class="d-inline-flex align-items-center gap-2 small mb-0 cursor-pointer">
+									<input type="color" class="form-control form-control-color" id="opt-fg" value="#000000" />
+									<span>Code Color</span>
+									<code id="lbl-fg">#000000</code>
+								</label>
+
+								<label id="lbl-bg-container" class="d-inline-flex align-items-center gap-2 small mb-0 cursor-pointer">
+									<input type="color" class="form-control form-control-color" id="opt-bg" value="#ffffff" />
+									<span>Background</span>
+									<code id="lbl-bg">#ffffff</code>
+								</label>
+
+								<div class="form-check form-switch small mb-0 ms-auto">
+									<input id="opt-trans" type="checkbox" class="form-check-input cursor-pointer" />
+									<label for="opt-trans" class="form-check-label text-muted cursor-pointer">Transparent</label>
+								</div>
+							</div>
+
+							<div id="contrast-warning" class="alert alert-warning small mt-3 mb-0 py-2 px-3 d-none" role="status">
+								<i class="fa fa-info-circle me-1" aria-hidden="true"></i>
+								<span id="contrast-warning-text"></span>
+							</div>
+						</div>
+
+						<!-- Style Presets -->
+						<div class="card p-3 shadow-sm border-0">
+							<div class="small fw-semibold text-muted mb-2">
+								<i class="fa fa-magic me-1" aria-hidden="true"></i>
+								Style Presets
+							</div>
+							<div class="d-flex flex-wrap gap-2">
+								<button type="button" class="btn btn-outline-secondary btn-sm" data-preset="standard">Standard</button>
+								<button type="button" class="btn btn-outline-secondary btn-sm" data-preset="dots">Polka Dots</button>
+								<button type="button" class="btn btn-outline-secondary btn-sm" data-preset="fluid">Fluid</button>
+								<button type="button" class="btn btn-outline-secondary btn-sm" data-preset="tech">Tech</button>
+							</div>
+						</div>
+
+						<!-- Geometry & Precision -->
+						<div class="card p-3 shadow-sm border-0">
+							<div class="small fw-semibold text-muted mb-3 pb-2 border-bottom">
+								<i class="fa fa-sliders me-1" aria-hidden="true"></i>
+								Geometry & Precision
+							</div>
+
+							<div class="row g-3">
+								<div class="col-sm-6">
+									<div class="d-flex justify-content-between small text-muted mb-1">
+										<label for="opt-border">Quiet Zone Margins</label>
+										<code id="val-border">4 modules</code>
+									</div>
+									<input id="opt-border" type="range" class="form-range" min="0" max="12" step="1" value="4" />
+								</div>
+
+								<div class="col-sm-6">
+									<div class="d-flex justify-content-between small text-muted mb-1">
+										<label for="opt-dot">Dot Scale</label>
+										<code id="val-dot">100%</code>
+									</div>
+									<input id="opt-dot" type="range" class="form-range" min="40" max="100" step="1" value="100" />
+								</div>
+
+								<div class="col-sm-6">
+									<div class="d-flex justify-content-between small text-muted mb-1">
+										<label for="opt-round">Dot Curvature</label>
+										<code id="val-round">0%</code>
+									</div>
+									<input id="opt-round" type="range" class="form-range" min="0" max="50" step="1" value="0" />
+								</div>
+
+								<div class="col-sm-6">
+									<div class="d-flex justify-content-between small text-muted mb-1">
+										<label for="opt-finder">Corner Curvature</label>
+										<code id="val-finder">0%</code>
+									</div>
+									<input id="opt-finder" type="range" class="form-range" min="0" max="50" step="1" value="0" />
+								</div>
+
+								<div class="col-12">
+									<label for="opt-level" class="form-label small text-muted mb-1">Error Correction</label>
+									<select id="opt-level" class="form-select form-select-sm">
+										<option value="L">Level L (7% Recovery)</option>
+										<option value="M">Level M (15% Recovery)</option>
+										<option value="Q">Level Q (25% Recovery)</option>
+										<option value="H" selected>Level H (30% Recovery)</option>
+									</select>
+									<small id="image-lock-notice" class="text-muted d-block mt-1 d-none">
+										Locked to High level (30%) while a background image is active.
+									</small>
+								</div>
+							</div>
+						</div>
+
+					</div>
+				</div>
+
+				<!-- Preview Viewport Column (Sticky) -->
+				<div class="col-lg-5">
+					<div class="qr-sticky-pane">
+						<div class="card overflow-hidden shadow-sm border-0">
+							<div class="card-header bg-white d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+								<span class="small fw-semibold">
+									<i class="fa fa-eye text-muted me-1" aria-hidden="true"></i>
+									Viewport
+								</span>
+								<button type="button" class="btn btn-sm btn-primary d-none" id="btn-download">
+									<i class="fa fa-download me-1" aria-hidden="true"></i>
+									Download PNG
+								</button>
+							</div>
+
+							<div class="qr-preview-area position-relative">
+								<div id="preview-placeholder" class="text-center text-muted p-4">
+									<i class="fa fa-qrcode fa-3x d-block opacity-25 mb-2" aria-hidden="true"></i>
+									<span class="small">Enter a payload and press Generate</span>
+								</div>
+								<div id="qrcode" class="qr-output-box d-none"></div>
+							</div>
+
+							<div id="card-footer-target" class="card-footer bg-white py-2 px-3 small text-truncate d-none">
+								<span class="text-muted me-1">Target:</span>
+								<code class="user-select-all" id="target-display"></code>
+							</div>
+						</div>
+					</div>
+				</div>
+
 			</div>
-
-			<br />
-
-			<div class="center">
-				<button
-					class="w3-button w3-white w3-border w3-border-blue"
-					style="margin: 0 auto"
-					onclick="download()"
-				>
-					Download PNG
-				</button>
-			</div>
-
-			<div class="center">
-				<p>
-					*Note that these QR codes may not work with every QR code
-					reader, so be sure to test them first. If you are having
-					trouble getting them to read, you may want to increase the
-					bit size.
-				</p>
-			</div>
-
-			<br />
 		</div>
+	</div>
 
-		<a id="link"></a>
-		<div id="qrcode" style="display: none"></div>
-		<script src="qrcode.js"></script>
-		<script src="index.js"></script>
-	</body>
+	<!-- 1. The core model generator required by buildModel() in your index.js -->
+	<script src="qrcode.js"></script>
+
+	<!-- 2. Your custom index.js containing window.qrCode -->
+	<script src="index.js"></script>
+
+	<script>
+  (() => {
+    const MaxImageBytes = 5 * 1024 * 1024;
+
+    const defaultOptions = {
+      size: 512,
+      border: 4,
+      dotSize: 100,
+      dotRoundness: 0,
+      dotStyle: "square",
+      finderStyle: "square",
+      finderRoundness: 0,
+      errorLevel: "H",
+      foreground: "#000000",
+      background: "#ffffff",
+      transparentBackground: false,
+      drawWhiteDots: true,
+      imageMargin: 0,
+      bgOpacity: 0
+    };
+
+    let options = { ...defaultOptions };
+    let generatedUrl = "";
+    let imageName = null;
+
+    // DOM Elements
+    const urlInput = document.getElementById("qr-url");
+    const btnGenerate = document.getElementById("btn-generate");
+    const btnReset = document.getElementById("btn-reset");
+    const btnDownload = document.getElementById("btn-download");
+    const qrContainer = document.getElementById("qrcode");
+    const previewPlaceholder = document.getElementById("preview-placeholder");
+    const cardFooterTarget = document.getElementById("card-footer-target");
+    const targetDisplay = document.getElementById("target-display");
+    const errorAlert = document.getElementById("error-alert");
+    const errorMessage = document.getElementById("error-message");
+    const contrastWarning = document.getElementById("contrast-warning");
+    const contrastWarningText = document.getElementById("contrast-warning-text");
+
+    // File Elements
+    const fileInput = document.getElementById("qr-image");
+    const fileReplaceInput = document.getElementById("qr-image-replace");
+    const dropzone = document.getElementById("dropzone-empty");
+    const dropIcon = document.getElementById("drop-icon");
+    const dropText = document.getElementById("drop-text");
+    const fileSelectedBox = document.getElementById("file-selected-box");
+    const imageNameText = document.getElementById("image-name-text");
+    const imageNameDisplay = document.getElementById("image-name-display");
+    const btnClearImage = document.getElementById("btn-clear-image");
+    const imageLockNotice = document.getElementById("image-lock-notice");
+
+    // Controls
+    const optFg = document.getElementById("opt-fg");
+    const optBg = document.getElementById("opt-bg");
+    const lblFg = document.getElementById("lbl-fg");
+    const lblBg = document.getElementById("lbl-bg");
+    const lblBgContainer = document.getElementById("lbl-bg-container");
+    const optTrans = document.getElementById("opt-trans");
+    const optBorder = document.getElementById("opt-border");
+    const optDot = document.getElementById("opt-dot");
+    const optRound = document.getElementById("opt-round");
+    const optFinder = document.getElementById("opt-finder");
+    const optLevel = document.getElementById("opt-level");
+
+    const valBorder = document.getElementById("val-border");
+    const valDot = document.getElementById("val-dot");
+    const valRound = document.getElementById("val-round");
+    const valFinder = document.getElementById("val-finder");
+
+    function normalize(val) {
+      if (!val) return null;
+      val = val.trim();
+      if (!val) return null;
+      if (val.includes("://") || /^mailto:/i.test(val) || /^tel:/i.test(val)) return val;
+      if (!val.includes(" ") && val.includes(".")) return `https://${val}`;
+      return val;
+    }
+
+    function channelLum(val) {
+      const c = val / 255.0;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+
+    function luminance(hex) {
+      if (!hex || hex.length !== 7 || hex[0] !== "#") return null;
+      const rgb = parseInt(hex.slice(1), 16);
+      if (isNaN(rgb)) return null;
+      return 0.2126 * channelLum((rgb >> 16) & 0xff) +
+             0.7152 * channelLum((rgb >> 8) & 0xff) +
+             0.0722 * channelLum(rgb & 0xff);
+    }
+
+    function checkContrast() {
+      if (options.transparentBackground) {
+        contrastWarning.classList.add("d-none");
+        return;
+      }
+      const fg = luminance(options.foreground);
+      const bg = luminance(options.background);
+      if (fg === null || bg === null) {
+        contrastWarning.classList.add("d-none");
+        return;
+      }
+      if (fg >= bg) {
+        contrastWarningText.textContent = "Make the code darker than the background. Many scanners cannot read inverted codes.";
+        contrastWarning.classList.remove("d-none");
+        return;
+      }
+      const ratio = (bg + 0.05) / (fg + 0.05);
+      if (ratio < 3) {
+        contrastWarningText.textContent = "Low contrast between colors may cause scanning failures.";
+        contrastWarning.classList.remove("d-none");
+      } else {
+        contrastWarning.classList.add("d-none");
+      }
+    }
+
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorAlert.classList.remove("d-none");
+    }
+
+    function clearError() {
+      errorAlert.classList.add("d-none");
+      errorMessage.textContent = "";
+    }
+
+    async function renderAsync(text) {
+      if (!window.qrCode || !window.qrCode.generate) {
+        showError("window.qrCode is not defined. Ensure index.js is loaded properly.");
+        return;
+      }
+
+      // Calls your index.js: window.qrCode.generate(elementId, text, opts)
+      const jsError = window.qrCode.generate("qrcode", text, options);
+      if (jsError) {
+        showError(jsError);
+        return;
+      }
+
+      clearError();
+      generatedUrl = text;
+
+      qrContainer.classList.remove("d-none");
+      previewPlaceholder.classList.add("d-none");
+      btnDownload.classList.remove("d-none");
+      cardFooterTarget.classList.remove("d-none");
+      targetDisplay.textContent = generatedUrl;
+      targetDisplay.title = generatedUrl;
+
+      if (options.transparentBackground) {
+        qrContainer.classList.add("qr-checkerboard");
+      } else {
+        qrContainer.classList.remove("qr-checkerboard");
+      }
+    }
+
+    async function onOptionsChanged() {
+      checkContrast();
+      if (generatedUrl) {
+        await renderAsync(generatedUrl);
+      }
+    }
+
+    // Input handlers
+    urlInput.addEventListener("input", () => {
+      btnGenerate.disabled = !urlInput.value.trim();
+    });
+
+    urlInput.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" && urlInput.value.trim()) {
+        await generateQRCode();
+      }
+    });
+
+    btnGenerate.addEventListener("click", generateQRCode);
+
+    async function generateQRCode() {
+      clearError();
+      const text = normalize(urlInput.value);
+      if (!text) {
+        showError("Please enter a valid URL or text.");
+        return;
+      }
+      await renderAsync(text);
+    }
+
+    // Colors & Swatches
+    optFg.addEventListener("input", async (e) => {
+      options.foreground = e.target.value;
+      lblFg.textContent = e.target.value;
+      await onOptionsChanged();
+    });
+
+    optBg.addEventListener("input", async (e) => {
+      options.background = e.target.value;
+      lblBg.textContent = options.transparentBackground ? "none" : e.target.value;
+      await onOptionsChanged();
+    });
+
+    optTrans.addEventListener("change", async (e) => {
+      options.transparentBackground = e.target.checked;
+      optBg.disabled = e.target.checked;
+      lblBgContainer.classList.toggle("opacity-50", e.target.checked);
+      lblBg.textContent = e.target.checked ? "none" : options.background;
+      await onOptionsChanged();
+    });
+
+    // Sliders
+    optBorder.addEventListener("input", async (e) => {
+      options.border = parseInt(e.target.value, 10);
+      valBorder.textContent = `${options.border} ${options.border === 1 ? "module" : "modules"}`;
+      await onOptionsChanged();
+    });
+
+    optDot.addEventListener("input", async (e) => {
+      options.dotSize = parseInt(e.target.value, 10);
+      valDot.textContent = `${options.dotSize}%`;
+      await onOptionsChanged();
+    });
+
+    optRound.addEventListener("input", async (e) => {
+      options.dotRoundness = parseInt(e.target.value, 10);
+      valRound.textContent = `${options.dotRoundness}%`;
+      await onOptionsChanged();
+    });
+
+    optFinder.addEventListener("input", async (e) => {
+      options.finderRoundness = parseInt(e.target.value, 10);
+      valFinder.textContent = `${options.finderRoundness}%`;
+      await onOptionsChanged();
+    });
+
+    optLevel.addEventListener("change", async (e) => {
+      options.errorLevel = e.target.value;
+      await onOptionsChanged();
+    });
+
+    // Presets matching the Blazor component
+    document.querySelectorAll("[data-preset]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const presetName = btn.getAttribute("data-preset");
+        switch (presetName) {
+          case "dots":
+            options.dotStyle = "dots";
+            options.finderStyle = "dot";
+            options.dotRoundness = 50;
+            options.finderRoundness = 50;
+            break;
+          case "fluid":
+            options.dotStyle = "classy";
+            options.finderStyle = "rounded";
+            options.dotRoundness = 40;
+            options.finderRoundness = 40;
+            break;
+          case "tech":
+            options.dotStyle = "rounded";
+            options.finderStyle = "square";
+            options.dotRoundness = 15;
+            options.finderRoundness = 0;
+            break;
+          case "standard":
+          default:
+            options.dotStyle = "square";
+            options.finderStyle = "square";
+            options.dotRoundness = 0;
+            options.finderRoundness = 0;
+            break;
+        }
+
+        optRound.value = options.dotRoundness;
+        valRound.textContent = `${options.dotRoundness}%`;
+        optFinder.value = options.finderRoundness;
+        valFinder.textContent = `${options.finderRoundness}%`;
+
+        await onOptionsChanged();
+      });
+    });
+
+    // File Management
+    async function resetImageAsync() {
+      imageName = null;
+      if (window.qrCode && window.qrCode.clearImage) {
+        window.qrCode.clearImage("qr-image");
+      }
+    }
+
+    async function onImageSelected(inputElement) {
+      dropzone.classList.remove("drag-over");
+      clearError();
+
+      if (!inputElement.files || inputElement.files.length === 0) return;
+
+      const file = inputElement.files[0];
+
+      if (!file.type.startsWith("image/")) {
+        await resetImageAsync();
+        showError("File must be an image (PNG, JPG, SVG).");
+        return;
+      }
+
+      if (file.size > MaxImageBytes) {
+        await resetImageAsync();
+        showError("Image must be under 5 MB.");
+        return;
+      }
+
+      // Calls your index.js: window.qrCode.setImage(inputOrFile)
+      const jsError = await window.qrCode.setImage(inputElement);
+      if (jsError) {
+        await resetImageAsync();
+        showError(jsError);
+        return;
+      }
+
+      imageName = file.name;
+      imageNameText.textContent = file.name;
+      imageNameDisplay.title = file.name;
+
+      optLevel.value = "H";
+      optLevel.disabled = true;
+      imageLockNotice.classList.remove("d-none");
+
+      dropzone.classList.add("d-none");
+      fileSelectedBox.classList.remove("d-none");
+
+      if (generatedUrl) {
+        await renderAsync(generatedUrl);
+      }
+    }
+
+    fileInput.addEventListener("change", () => onImageSelected(fileInput));
+    fileReplaceInput.addEventListener("change", () => onImageSelected(fileReplaceInput));
+
+    btnClearImage.addEventListener("click", async () => {
+      clearError();
+      await resetImageAsync();
+      fileInput.value = "";
+      fileReplaceInput.value = "";
+      optLevel.disabled = false;
+      imageLockNotice.classList.add("d-none");
+      fileSelectedBox.classList.add("d-none");
+      dropzone.classList.remove("d-none");
+
+      if (generatedUrl) {
+        await renderAsync(generatedUrl);
+      }
+    });
+
+    // Dropzone Drag Events
+    dropzone.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("drag-over");
+      dropIcon.className = "fa fa-cloud-upload fa-2x mb-2 text-primary";
+      dropText.className = "small fw-bold text-primary";
+      dropText.textContent = "Drop image here";
+    });
+
+    dropzone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("drag-over");
+      dropIcon.className = "fa fa-cloud-upload fa-2x mb-2 text-muted";
+      dropText.className = "small text-muted";
+      dropText.textContent = "Click or drop image to embed behind QR";
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      dropzone.classList.remove("drag-over");
+      dropIcon.className = "fa fa-cloud-upload fa-2x mb-2 text-muted";
+      dropText.className = "small text-muted";
+      dropText.textContent = "Click or drop image to embed behind QR";
+    });
+
+    // Reset Options
+    btnReset.addEventListener("click", async () => {
+      options = { ...defaultOptions };
+
+      optFg.value = options.foreground;
+      lblFg.textContent = options.foreground;
+      optBg.value = options.background;
+      lblBg.textContent = options.background;
+      optBg.disabled = false;
+      lblBgContainer.classList.remove("opacity-50");
+      optTrans.checked = false;
+
+      optBorder.value = options.border;
+      valBorder.textContent = `${options.border} modules`;
+      optDot.value = options.dotSize;
+      valDot.textContent = `${options.dotSize}%`;
+      optRound.value = options.dotRoundness;
+      valRound.textContent = `${options.dotRoundness}%`;
+      optFinder.value = options.finderRoundness;
+      valFinder.textContent = `${options.finderRoundness}%`;
+
+      if (!imageName) {
+        optLevel.value = options.errorLevel;
+        optLevel.disabled = false;
+      }
+
+      await onOptionsChanged();
+    });
+
+    // Calls your index.js: window.qrCode.download(elementId, fileName)
+    btnDownload.addEventListener("click", () => {
+      if (window.qrCode && window.qrCode.download) {
+        window.qrCode.download("qrcode", "qr-code.png");
+      }
+    });
+  })();
+	</script>
+</body>
 </html>

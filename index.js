@@ -1,250 +1,353 @@
-/**
- * Section: Uploading Images
- */
+window.qrCode = (function () {
+	const DEFAULTS = {
+		size: 512,
+		border: 4,               // Quiet zone modules around the QR code
+		imageMargin: 0,          // Margin (in modules or px) indented inside the QR code
+		dotSize: 70,             // 30 to 100 (% of full cell size)
+		dotRoundness: 0,         // 0 to 50
+		dotStyle: "square",      // "square", "rounded", "dots", "classy"
+		finderStyle: "square",   // "square", "rounded", "dot"
+		finderRoundness: 0,
+		errorLevel: "H",         // "H" is recommended when overlaying an image
+		foreground: "#000000",
+		background: "#ffffff",
+		drawWhiteDots: true,     // Draw un-encoded (false) bits in white
+		transparentBackground: false,
+		bgOpacity: 0             // 0.0 (raw image) to 1.0 (tint overlay)
+	};
 
-var imageLoader = document.getElementById("imageLoader");
-imageLoader.addEventListener("change", handleImage, false);
-var uploadCanvas = document.getElementById("imageCanvas");
-var uploadContext = uploadCanvas.getContext("2d");
+	let bgImage = null;
 
-uploadWidth = 200;
-uploadHeight = 200;
+	function clamp(value, min, max, fallback) {
+		const n = Number(value);
+		if (!Number.isFinite(n)) return fallback;
+		return Math.min(max, Math.max(min, n));
+	}
 
-uploadCanvas.width = uploadWidth;
-uploadCanvas.height = uploadHeight;
+	function color(value, fallback) {
+		return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value || "") ? value : fallback;
+	}
 
-img = false;
+	function normalize(opts) {
+		const o = Object.assign({}, DEFAULTS, opts || {});
+		return {
+			size: Math.round(clamp(o.size, 64, 4096, DEFAULTS.size)),
+			border: Math.round(clamp(o.border, 0, 20, DEFAULTS.border)),
+			imageMargin: Math.round(clamp(o.imageMargin, 0, 10, DEFAULTS.imageMargin)),
+			dotSize: clamp(o.dotSize, 20, 100, DEFAULTS.dotSize),
+			dotRoundness: clamp(o.dotRoundness, 0, 50, DEFAULTS.dotRoundness) / 50,
+			dotStyle: ["square", "rounded", "dots", "classy"].includes(o.dotStyle) ? o.dotStyle : DEFAULTS.dotStyle,
+			finderStyle: ["square", "rounded", "dot"].includes(o.finderStyle) ? o.finderStyle : DEFAULTS.finderStyle,
+			finderRoundness: clamp(o.finderRoundness, 0, 50, DEFAULTS.finderRoundness) / 50,
+			errorLevel: ["L", "M", "Q", "H"].includes(o.errorLevel) ? o.errorLevel : DEFAULTS.errorLevel,
+			foreground: color(o.foreground, DEFAULTS.foreground),
+			background: color(o.background, DEFAULTS.background),
+			drawWhiteDots: Boolean(o.drawWhiteDots),
+			transparentBackground: Boolean(o.transparentBackground),
+			bgOpacity: clamp(o.bgOpacity, 0, 1, DEFAULTS.bgOpacity)
+		};
+	}
 
-function handleImage(e) {
-  var reader = new FileReader();
-  reader.onload = function (event) {
-    img = new Image();
-    img.onload = function () {
-      uploadContext.clearRect(0, 0, uploadWidth, uploadHeight);
-      uploadContext.drawImage(img, 0, 0, uploadWidth, uploadHeight);
-    };
-    img.src = event.target.result;
-  };
-  reader.readAsDataURL(e.target.files[0]);
-}
+	function loadImage(file) {
+		return new Promise(function (resolve, reject) {
+			const url = URL.createObjectURL(file);
+			const img = new Image();
 
-/**
- * Section: Initialize qrcode and canvas
- */
+			img.onload = function () {
+				URL.revokeObjectURL(url);
+				resolve(img);
+			};
 
-var canvas = false;
+			img.onerror = function () {
+				URL.revokeObjectURL(url);
+				reject(new Error("Image failed to load."));
+			};
 
-var qrcode = new QRCode("qrcode", {
-  width: 256,
-  height: 256,
-  colorDark: "#000000",
-  colorLight: "#ffffff",
-  correctLevel: QRCode.CorrectLevel.L,
-});
+			img.src = url;
+		});
+	}
 
-/**
- * Section: Code to handle inputs (e.g., sliders)
- */
+	function addRoundRect(ctx, x, y, w, h, radius) {
+		radius = Math.min(radius, w / 2, h / 2);
+		if (radius <= 0) {
+			ctx.rect(x, y, w, h);
+			return;
+		}
+		ctx.moveTo(x + radius, y);
+		ctx.arcTo(x + w, y, x + w, y + h, radius);
+		ctx.arcTo(x + w, y + h, x, y + h, radius);
+		ctx.arcTo(x, y + h, x, y, radius);
+		ctx.arcTo(x, y, x + w, y, radius);
+		ctx.closePath();
+	}
 
-// Size of QR Code squares
-var sizeSlider = document.getElementById("radiusSize");
-var sizeOutput = document.getElementById("printSize");
+	function isFinder(row, col, count) {
+		return (
+			(row < 8 && col < 8) ||
+			(row < 8 && col >= count - 8) ||
+			(row >= count - 8 && col < 8)
+		);
+	}
 
-// Display the default slider value and grab it
-sizeOutput.innerHTML = sizeSlider.value;
-var radiusRatio = sizeSlider.value / 200;
+	function drawFinder(ctx, x, y, cell, style, roundness, backgroundColor, isTransparent) {
+		const size = 7 * cell;
+		let outerR = size * roundness * 0.5;
+		let middleR = 5 * cell * roundness * 0.5;
+		let innerR = 3 * cell * roundness * 0.5;
 
-// Update the current slider value
-sizeSlider.oninput = function () {
-  sizeOutput.innerHTML = this.value;
-  radiusRatio = this.value / 200;
-};
+		if (style === "rounded") {
+			outerR = size * 0.35;
+			middleR = 5 * cell * 0.35;
+			innerR = 3 * cell * 0.35;
+		} else if (style === "dot") {
+			outerR = size * 0.5;
+			middleR = 5 * cell * 0.5;
+			innerR = 3 * cell * 0.5;
+		}
 
-// Level of error correction (low, medium, high) (excluding quartile)
-var correctionSlider = document.getElementById("errorCorrection");
-var correctionOutput = document.getElementById("printCorrection");
+		// Outer frame
+		ctx.beginPath();
+		addRoundRect(ctx, x, y, size, size, outerR);
+		ctx.fill();
 
-// Display the default slider value and grab it
-correctionOutput.innerHTML = correctionSlider.value;
-var correctionLevel = correctionSlider.value;
-if (correctionLevel === "1") {
-  qrcode._htOption.correctLevel = QRCode.CorrectLevel.L;
-} else if (correctionLevel === "2") {
-  qrcode._htOption.correctLevel = QRCode.CorrectLevel.M;
-} else if (correctionLevel === "3") {
-  qrcode._htOption.correctLevel = QRCode.CorrectLevel.H;
-}
+		// Cutout ring
+		ctx.save();
+		if (isTransparent) {
+			ctx.globalCompositeOperation = "destination-out";
+		} else {
+			ctx.fillStyle = backgroundColor;
+		}
+		ctx.beginPath();
+		addRoundRect(ctx, x + cell, y + cell, 5 * cell, 5 * cell, middleR);
+		ctx.fill();
+		ctx.restore();
 
-// Update the current slider value
-correctionSlider.oninput = function () {
-  correctionOutput.innerHTML = this.value;
-  correctionLevel = correctionSlider.value;
-  if (correctionLevel === "1") {
-    qrcode._htOption.correctLevel = QRCode.CorrectLevel.L;
-  } else if (correctionLevel === "2") {
-    qrcode._htOption.correctLevel = QRCode.CorrectLevel.M;
-  } else if (correctionLevel === "3") {
-    qrcode._htOption.correctLevel = QRCode.CorrectLevel.H;
-  }
-};
+		// Center core
+		ctx.beginPath();
+		addRoundRect(ctx, x + 2 * cell, y + 2 * cell, 3 * cell, 3 * cell, innerR);
+		ctx.fill();
+	}
 
-// Size of white border (quiet zone)
-var borderSlider = document.getElementById("borderSize");
-var borderOutput = document.getElementById("printBorderSize");
-borderOutput.innerHTML = borderSlider.value; // Display the default slider value
-var borderSizeValue = Number(borderSlider.value);
+	function drawModule(ctx, col, row, cell, dotSize, style, roundness) {
+		const radius = (cell * (dotSize / 100)) / 2;
+		const width = radius * 2;
+		const height = radius * 2;
+		const centerX = cell * (col + 0.5);
+		const centerY = cell * (row + 0.5);
+		const x = centerX - radius;
+		const y = centerY - radius;
 
-// Update the current slider value (each time you drag the slider handle)
-borderSlider.oninput = function () {
-  borderOutput.innerHTML = this.value;
-  borderSizeValue = Number(this.value);
-};
+		ctx.beginPath();
+		if (style === "dots") {
+			ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+		} else {
+			const cornerRadius = (Math.min(width, height) / 2) * (roundness > 0 ? roundness : 0);
+			addRoundRect(ctx, x, y, width, height, cornerRadius);
+		}
+		ctx.fill();
+	}
 
-/**
- * Section: Helper functions for visualizing QR code
- */
+	function drawQrBoundBackground(ctx, image, offset, matrixSize, options, cell) {
+		ctx.save();
+		const marginPx = options.imageMargin * cell;
+		const drawX = offset + marginPx;
+		const drawY = offset + marginPx;
+		const drawSize = Math.max(0, matrixSize - marginPx * 2);
 
-/**
- * Check whether bit at current position should be full sized.
- * In particular, make the position bits (corners) full sized.
- *
- * @param {i} The current bit's row.
- * @param {j} The current bit's column.
- * @param {QRLength} The length of the QR code.
- * @return {isPosition} Whether or not the current bit is safe to modify.
- */
-function isSafeBit(i, j, QRLength) {
-  // Currently hard coding position bits
-  lowerLimit = 7 + borderSizeValue;
-  upperLimit = QRLength - 8 + borderSizeValue;
-  if (i < lowerLimit && j < lowerLimit) {
-    return false;
-  } else if (i > upperLimit && j < lowerLimit) {
-    return false;
-  } else if (i < lowerLimit && j > upperLimit) {
-    return false;
-  }
+		ctx.drawImage(image, drawX, drawY, drawSize, drawSize);
 
-  return true;
-}
+		if (!options.transparentBackground && options.bgOpacity > 0) {
+			ctx.fillStyle = options.background;
+			ctx.globalAlpha = options.bgOpacity;
+			ctx.fillRect(drawX, drawY, drawSize, drawSize);
+		}
+		ctx.restore();
+	}
 
-/**
- * Draw basic shape representing each bit of the QR code.
- *
- * @param {ctx} Context of associated canvas.
- * @param {i} The current bit's row.
- * @param {j} The current bit's column.
- * @param {bitLength} The maximum length of each bit.
- * @param {radiusRatio} The radius should be this ratio times the bitLength.
- *  The ratio should be between 0 and 0.5.
- * @param {QRLength} The length of the QR code.
- */
-function drawShape(ctx, i, j, bitLength, radiusRatio, QRLength) {
-  // Draw centered
-  xCenter = bitLength * (i + 0.5);
-  yCenter = bitLength * (j + 0.5);
+	function buildModel(text, level) {
+		if (typeof QRCode === "undefined") {
+			throw new Error("QRCode library has not been loaded.");
+		}
 
-  if (!isSafeBit(i, j, QRLength)) {
-    radiusRatio = 0.5;
-  }
-  radius = bitLength * radiusRatio;
+		const scratch = document.createElement("div");
+		const qr = new QRCode(scratch, {
+			width: 256,
+			height: 256,
+			correctLevel: QRCode.CorrectLevel[level]
+		});
 
-  ctx.fillRect(xCenter - radius, yCenter - radius, 2 * radius, 2 * radius);
-}
+		qr.makeCode(text);
 
-/**
- * Download the QR code as a PNG
- */
-function download() {
-  // Download image
-  if (!canvas) {
-    alert("Error: no QR code to download");
-    return;
-  }
-  var link = document.getElementById("link");
-  link.setAttribute("download", "qr_image.png");
-  link.setAttribute(
-    "href",
-    canvas.toDataURL("image/png").replace("image/png", "image/octet-stream")
-  );
-  link.click();
-}
+		if (!qr._oQRCode || !qr._oQRCode.modules) {
+			throw new Error("The QR code model could not be created.");
+		}
 
-/**
- * Make the QR code
- */
-function makeCode() {
-  // Grab url input
-  elementText = document.getElementById("text");
-  url = elementText.value;
+		return qr._oQRCode;
+	}
 
-  // Check for non-empty url
-  if (!url) {
-    alert("Error: empty input");
-    elementText.focus();
-    return;
-  }
+	function draw(model, canvas, options) {
+		const matrix = model.modules;
+		const qrLength = matrix.length;
+		const border = options.border;
+		const totalModules = qrLength + border * 2;
 
-  // // Pad URL since we want more density
-  // maxLength = 40;
-  // if (url.length < maxLength) {
-  //   url += "?/" + "0".repeat(maxLength - url.length);
-  // }
+		const cell = Math.max(1, Math.floor(options.size / totalModules));
+		const canvasSize = cell * totalModules;
+		const matrixSize = qrLength * cell;
+		const offset = border * cell;
 
-  // Generate URL bits
-  qrcode.makeCode(url);
+		canvas.width = canvasSize;
+		canvas.height = canvasSize;
 
-  // Manually draw canvas
-  QRMatrix = qrcode._oQRCode.modules;
-  QRLength = QRMatrix.length;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) throw new Error("Canvas rendering is not supported.");
 
-  // Form canvas
-  canvas = document.getElementById("myCanvas");
-  ctx = canvas.getContext("2d");
+		// 1. Draw outer background
+		if (options.transparentBackground) {
+			ctx.clearRect(0, 0, canvasSize, canvasSize);
+		} else {
+			ctx.fillStyle = options.background;
+			ctx.fillRect(0, 0, canvasSize, canvasSize);
+		}
 
-  // QR code sizing
-  bitLength = 10;
-  canvasLength = bitLength * (QRLength + borderSizeValue * 2);
-  canvas.width = canvasLength;
-  canvas.height = canvasLength;
+		// 2. Draw user-uploaded image with the inset margin applied
+		if (bgImage) {
+			drawQrBoundBackground(ctx, bgImage, offset, matrixSize, options, cell);
+		}
 
-  // Set background of canvas
-  if (document.getElementById("whitebackground").checked) {
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, canvasLength, canvasLength);
-  }
+		ctx.imageSmoothingEnabled = false;
 
-  // Set image of code
-  if (img) {
-    ctx.drawImage(
-      img,
-      bitLength * borderSizeValue,
-      bitLength * borderSizeValue,
-      bitLength * QRLength,
-      bitLength * QRLength
-    );
-  }
+		// 3. Draw Corner Finders
+		const finderLocations = [
+			{ row: 0, col: 0 },
+			{ row: 0, col: qrLength - 7 },
+			{ row: qrLength - 7, col: 0 }
+		];
 
-  // Colors of true and false bits
-  black = "#000000";
-  white = "#FFFFFF";
+		for (const finder of finderLocations) {
+			ctx.fillStyle = options.foreground;
+			drawFinder(
+				ctx,
+				(finder.col + border) * cell,
+				(finder.row + border) * cell,
+				cell,
+				options.finderStyle,
+				options.finderRoundness,
+				options.background,
+				options.transparentBackground
+			);
+		}
 
-  // Populate canvas with bits
-  for (let i = 0; i < QRLength; i++) {
-    for (let j = 0; j < QRLength; j++) {
-      if (QRMatrix[i][j]) {
-        ctx.fillStyle = black;
-      } else {
-        ctx.fillStyle = white;
-      }
-      drawShape(
-        ctx,
-        j + borderSizeValue,
-        i + borderSizeValue,
-        bitLength,
-        radiusRatio,
-        QRLength
-      );
-    }
-  }
-}
+		// 4. Draw QR Modules: dark bits use foreground, light bits always use #ffffff
+		for (let row = 0; row < qrLength; row++) {
+			for (let col = 0; col < qrLength; col++) {
+				if (isFinder(row, col, qrLength)) continue;
+
+				const isDark = matrix[row][col];
+
+				if (!isDark && !options.drawWhiteDots) {
+					continue;
+				}
+
+				// Always use pure white (#ffffff) for light modules
+				ctx.fillStyle = isDark ? options.foreground : "#ffffff";
+
+				drawModule(
+					ctx,
+					col + border,
+					row + border,
+					cell,
+					options.dotSize,
+					options.dotStyle,
+					options.dotRoundness
+				);
+			}
+		}
+
+		return canvasSize;
+	}
+
+	function generate(elementId, text, opts) {
+		try {
+			const host = document.getElementById(elementId);
+			if (!host) return "The QR code container was not found.";
+			if (!text || !String(text).trim()) return "Enter a link to generate a QR code.";
+
+			const options = normalize(opts);
+			const level = bgImage ? "H" : options.errorLevel;
+			const model = buildModel(String(text), level);
+			const canvas = document.createElement("canvas");
+
+			draw(model, canvas, options);
+
+			canvas.setAttribute("role", "img");
+			canvas.setAttribute("aria-label", "QR code for " + text);
+
+			if (typeof host.replaceChildren === "function") {
+				host.replaceChildren(canvas);
+			} else {
+				host.innerHTML = "";
+				host.appendChild(canvas);
+			}
+
+			return null;
+		} catch (err) {
+			console.error("QR generation failed:", err);
+			return err && err.message ? err.message : "The QR code could not be generated.";
+		}
+	}
+
+	async function setImage(inputOrFile) {
+		try {
+			let file = inputOrFile;
+			if (typeof inputOrFile === "string") {
+				const input = document.getElementById(inputOrFile);
+				file = input && input.files && input.files[0];
+			} else if (inputOrFile && inputOrFile.target) {
+				file = inputOrFile.target.files && inputOrFile.target.files[0];
+			}
+
+			if (!file) {
+				bgImage = null;
+				return null;
+			}
+
+			bgImage = await loadImage(file);
+			return null;
+		} catch (err) {
+			console.error("QR image failed:", err);
+			bgImage = null;
+			return "Image could not be read.";
+		}
+	}
+
+	function clearImage(inputId) {
+		bgImage = null;
+		if (inputId) {
+			const input = document.getElementById(inputId);
+			if (input) input.value = "";
+		}
+	}
+
+	function download(elementId, fileName) {
+		const host = document.getElementById(elementId);
+		if (!host) return;
+
+		const canvas = host.querySelector("canvas");
+		if (!canvas) return;
+
+		const link = document.createElement("a");
+		link.download = fileName || "qr_image.png";
+		link.href = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+		document.body.appendChild(link);
+		link.click();
+		link.remove();
+	}
+
+	return {
+		generate,
+		setImage,
+		clearImage,
+		download
+	};
+})();
