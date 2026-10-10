@@ -1,4 +1,8 @@
-var QRCode;
+let QRCode;
+let QRCodeModel;
+let QRErrorCorrectLevel;
+let QRMode;
+let getTypeNumber;
 
 (function () {
 	// Standard QR 8-bit Byte encoding using standard TextEncoder for UTF-8
@@ -600,4 +604,17 @@ var QRCode;
 	};
 
 	QRCode.CorrectLevel = QRErrorCorrectLevel;
+	QRCode.QRCodeModel = QRCodeModel;
+	QRCode.getTypeNumber = _getTypeNumber;
+	QRCode.QRMode = QRMode;
+
+	QRErrorCorrectLevel = QRCode.CorrectLevel;
+	QRCodeModel = QRCode.QRCodeModel;
+	QRMode = QRCode.QRMode;
+	getTypeNumber = _getTypeNumber;
 })();
+
+export { QRCode, QRCodeModel, QRErrorCorrectLevel, QRMode, getTypeNumber };
+export default QRCode;
+
+

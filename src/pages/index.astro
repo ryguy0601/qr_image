@@ -1,0 +1,662 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import QRControls from '../components/QRControls.astro';
+import QRPreview from '../components/QRPreview.astro';
+---
+
+<Layout title="QRImage Generator - Custom QR Codes with Images">
+  <Header />
+
+  <div class="row g-4">
+    <!-- Controls Column -->
+    <main class="col-lg-7">
+      <QRControls />
+    </main>
+
+    <!-- Preview Viewport Column (Sticky) -->
+    <aside class="col-lg-5">
+      <QRPreview />
+    </aside>
+  </div>
+</Layout>
+
+<script>
+  import {
+    generate,
+    setImage,
+    clearImage,
+    download,
+    copyToClipboard,
+    DEFAULTS
+  } from '../scripts/qrRenderer.js';
+
+  const MaxImageBytes = 10 * 1024 * 1024;
+
+  let options = { ...DEFAULTS };
+  let guaranteedScan = true;
+  let generatedUrl = "";
+  let imageName: string | null = null;
+
+  // DOM Elements
+  const urlInput = document.getElementById("qr-url") as HTMLInputElement;
+  const btnClearUrl = document.getElementById("btn-clear-url") as HTMLButtonElement;
+  const btnGenerate = document.getElementById("btn-generate") as HTMLButtonElement;
+  const btnReset = document.getElementById("btn-reset") as HTMLButtonElement;
+  const btnDownload = document.getElementById("btn-download") as HTMLButtonElement;
+  const exportSizeSelect = document.getElementById("export-size-select") as HTMLSelectElement;
+  const btnCopy = document.getElementById("btn-copy") as HTMLButtonElement;
+  const copyBtnText = document.getElementById("copy-btn-text") as HTMLElement;
+  const qrContainer = document.getElementById("qrcode") as HTMLElement;
+  const previewPlaceholder = document.getElementById("preview-placeholder") as HTMLElement;
+  const cardFooterTarget = document.getElementById("card-footer-target") as HTMLElement;
+  const targetDisplay = document.getElementById("target-display") as HTMLElement;
+  const errorAlert = document.getElementById("error-alert") as HTMLElement;
+  const errorMessage = document.getElementById("error-message") as HTMLElement;
+  const contrastWarning = document.getElementById("contrast-warning") as HTMLElement;
+  const contrastWarningText = document.getElementById("contrast-warning-text") as HTMLElement;
+
+  // Guaranteed Scan Toggle Elements
+  const toggleGuaranteedScan = document.getElementById("toggle-guaranteed-scan") as HTMLInputElement;
+  const scanStatusBadge = document.getElementById("scan-status-badge") as HTMLElement;
+  const headerScanBadge = document.getElementById("header-scan-badge") as HTMLElement;
+  const scanStatusDesc = document.getElementById("scan-status-desc") as HTMLElement;
+  const scanShieldIcon = document.getElementById("scan-shield-icon") as HTMLElement;
+  const rangeBoundHint = document.getElementById("range-bound-hint") as HTMLElement;
+
+  // File Elements
+  const fileInput = document.getElementById("qr-image") as HTMLInputElement;
+  const fileReplaceInput = document.getElementById("qr-image-replace") as HTMLInputElement;
+  const dropzone = document.getElementById("dropzone-empty") as HTMLElement;
+  const fileSelectedBox = document.getElementById("file-selected-box") as HTMLElement;
+  const imagePreviewThumb = document.getElementById("image-preview-thumb") as HTMLImageElement;
+  const imageNameText = document.getElementById("image-name-text") as HTMLElement;
+  const imageNameDisplay = document.getElementById("image-name-display") as HTMLElement;
+  const btnClearImage = document.getElementById("btn-clear-image") as HTMLButtonElement;
+  const imageOptionsPanel = document.getElementById("image-options-panel") as HTMLElement;
+
+  // Controls
+  const optFg = document.getElementById("opt-fg") as HTMLInputElement;
+  const optBg = document.getElementById("opt-bg") as HTMLInputElement;
+  const lblFg = document.getElementById("lbl-fg") as HTMLElement;
+  const lblBg = document.getElementById("lbl-bg") as HTMLElement;
+  const lblBgContainer = document.getElementById("lbl-bg-container") as HTMLElement;
+  const optTrans = document.getElementById("opt-trans") as HTMLInputElement;
+
+  // Sliders & Number inputs
+  const optDot = document.getElementById("opt-dot") as HTMLInputElement;
+  const numDot = document.getElementById("num-dot") as HTMLInputElement;
+  const optWhiteSize = document.getElementById("opt-white-size") as HTMLInputElement;
+  const numWhiteSize = document.getElementById("num-white-size") as HTMLInputElement;
+  const optBorder = document.getElementById("opt-border") as HTMLInputElement;
+  const numBorder = document.getElementById("num-border") as HTMLInputElement;
+  const optRound = document.getElementById("opt-round") as HTMLInputElement;
+  const numRound = document.getElementById("num-round") as HTMLInputElement;
+  const optImageMargin = document.getElementById("opt-image-margin") as HTMLInputElement;
+  const numImageMargin = document.getElementById("num-image-margin") as HTMLInputElement;
+
+  const optOpacity = document.getElementById("opt-opacity") as HTMLInputElement;
+  const valOpacity = document.getElementById("val-opacity") as HTMLElement;
+  const optWhiteDots = document.getElementById("opt-white-dots") as HTMLInputElement;
+  const optLevel = document.getElementById("opt-level") as HTMLSelectElement;
+
+  function normalize(val: string) {
+    if (!val) return null;
+    val = val.trim();
+    if (!val) return null;
+    if (val.includes("://") || /^mailto:/i.test(val) || /^tel:/i.test(val) || /^WIFI:/i.test(val)) return val;
+    if (!val.includes(" ") && val.includes(".")) return `https://${val}`;
+    return val;
+  }
+
+  function checkContrast() {
+    if (options.transparentBackground) {
+      contrastWarning?.classList.add("d-none");
+      return;
+    }
+    if (options.foreground.toLowerCase() === options.background.toLowerCase()) {
+      if (contrastWarningText) contrastWarningText.textContent = "Code color and background color are identical.";
+      contrastWarning?.classList.remove("d-none");
+    } else {
+      contrastWarning?.classList.add("d-none");
+    }
+  }
+
+  function showError(msg: string) {
+    if (errorMessage) errorMessage.textContent = msg;
+    errorAlert?.classList.remove("d-none");
+  }
+
+  function clearError() {
+    errorAlert?.classList.add("d-none");
+    if (errorMessage) errorMessage.textContent = "";
+  }
+
+  async function renderAsync(text: string) {
+    const renderOpts = { ...options, lockErrorLevel: guaranteedScan };
+    const jsError = generate("qrcode", text, renderOpts);
+    if (jsError) {
+      showError(jsError);
+      return;
+    }
+
+    clearError();
+    generatedUrl = text;
+
+    qrContainer?.classList.remove("d-none");
+    previewPlaceholder?.classList.add("d-none");
+    cardFooterTarget?.classList.remove("d-none");
+    if (targetDisplay) {
+      targetDisplay.textContent = generatedUrl;
+      targetDisplay.title = generatedUrl;
+    }
+
+    if (options.transparentBackground) {
+      qrContainer?.classList.add("qr-checkerboard");
+    } else {
+      qrContainer?.classList.remove("qr-checkerboard");
+    }
+  }
+
+  async function onOptionsChanged() {
+    checkContrast();
+    if (generatedUrl) {
+      await renderAsync(generatedUrl);
+    }
+  }
+
+  // Guaranteed Scan Toggle
+  toggleGuaranteedScan?.addEventListener("change", async (e: Event) => {
+    guaranteedScan = (e.target as HTMLInputElement).checked;
+    applyScanModeSettings();
+    await onOptionsChanged();
+  });
+
+  function applyScanModeSettings() {
+    if (guaranteedScan) {
+      if (scanStatusBadge) {
+        scanStatusBadge.className = "badge badge-scannable ms-1";
+        scanStatusBadge.textContent = "Protected (Safe Bounds)";
+      }
+      if (headerScanBadge) {
+        headerScanBadge.className = "badge badge-scannable text-xs fw-semibold px-2 py-1 ms-2";
+        headerScanBadge.innerHTML = '<i class="fa fa-shield me-1"></i>Guaranteed Scan ON';
+      }
+      if (scanShieldIcon) scanShieldIcon.className = "fa fa-shield text-success fs-5";
+      if (scanStatusDesc) {
+        scanStatusDesc.textContent = "Guarantees camera scannability with solid white portions and safe module sizing. Turn OFF for complete custom freedom to set any numbers.";
+      }
+      if (rangeBoundHint) rangeBoundHint.textContent = "Safe Mode: 60% – 100%";
+
+      if (optDot) optDot.min = "60";
+      if (numDot) numDot.min = "60";
+      if (options.dotSize < 60) {
+        options.dotSize = 90;
+        if (optDot) optDot.value = "90";
+        if (numDot) numDot.value = "90";
+      }
+
+      if (optWhiteSize) optWhiteSize.min = "60";
+      if (numWhiteSize) numWhiteSize.min = "60";
+      if (options.whiteDotSize < 60) {
+        options.whiteDotSize = 90;
+        if (optWhiteSize) optWhiteSize.value = "90";
+        if (numWhiteSize) numWhiteSize.value = "90";
+      }
+
+      if (optBorder) optBorder.min = "1";
+      if (numBorder) numBorder.min = "1";
+      if (options.border < 1) {
+        options.border = 4;
+        if (optBorder) optBorder.value = "4";
+        if (numBorder) numBorder.value = "4";
+      }
+
+      if (imageName && optLevel) {
+        optLevel.value = "H";
+        optLevel.disabled = true;
+      }
+    } else {
+      if (scanStatusBadge) {
+        scanStatusBadge.className = "badge badge-custom ms-1";
+        scanStatusBadge.textContent = "Custom Freedom (Any Number)";
+      }
+      if (headerScanBadge) {
+        headerScanBadge.className = "badge badge-custom text-xs fw-semibold px-2 py-1 ms-2";
+        headerScanBadge.innerHTML = '<i class="fa fa-unlock me-1"></i>Custom Freedom';
+      }
+      if (scanShieldIcon) scanShieldIcon.className = "fa fa-unlock text-warning fs-5";
+      if (scanStatusDesc) {
+        scanStatusDesc.textContent = "Full manual control: Set module scales and borders to whatever custom number you want (even 0 border or non-standard art sizes).";
+      }
+      if (rangeBoundHint) rangeBoundHint.textContent = "Unlocked: 0% – 100% (Any Number)";
+
+      if (optDot) optDot.min = "0";
+      if (numDot) numDot.min = "0";
+      if (optWhiteSize) optWhiteSize.min = "0";
+      if (numWhiteSize) numWhiteSize.min = "0";
+      if (optBorder) optBorder.min = "0";
+      if (numBorder) numBorder.min = "0";
+      if (optLevel) optLevel.disabled = false;
+    }
+  }
+
+  // Input handlers
+  urlInput?.addEventListener("keydown", async (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      await generateQRCode();
+    }
+  });
+
+  let typeDebounceTimer: any = null;
+  urlInput?.addEventListener("input", () => {
+    clearTimeout(typeDebounceTimer);
+    typeDebounceTimer = setTimeout(() => {
+      const text = normalize(urlInput.value);
+      if (text) {
+        renderAsync(text);
+      }
+    }, 350);
+  });
+
+  btnClearUrl?.addEventListener("click", () => {
+    if (urlInput) {
+      urlInput.value = "";
+      urlInput.focus();
+    }
+  });
+
+  btnGenerate?.addEventListener("click", generateQRCode);
+
+  async function generateQRCode() {
+    clearError();
+    const text = normalize(urlInput?.value || "");
+    if (!text) {
+      showError("Please enter a valid URL or text payload.");
+      return;
+    }
+    await renderAsync(text);
+  }
+
+  // Colors & Swatches
+  optFg?.addEventListener("input", async (e: Event) => {
+    const val = (e.target as HTMLInputElement).value;
+    options.foreground = val;
+    if (lblFg) lblFg.textContent = val;
+    await onOptionsChanged();
+  });
+
+  optBg?.addEventListener("input", async (e: Event) => {
+    const val = (e.target as HTMLInputElement).value;
+    options.background = val;
+    if (lblBg) lblBg.textContent = options.transparentBackground ? "none" : val;
+    await onOptionsChanged();
+  });
+
+  optTrans?.addEventListener("change", async (e: Event) => {
+    const checked = (e.target as HTMLInputElement).checked;
+    options.transparentBackground = checked;
+    if (optBg) optBg.disabled = checked;
+    lblBgContainer?.classList.toggle("opacity-50", checked);
+    if (lblBg) lblBg.textContent = checked ? "none" : options.background;
+    await onOptionsChanged();
+  });
+
+  // Dark Module Scale
+  optDot?.addEventListener("input", async (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    options.dotSize = val;
+    if (numDot) numDot.value = String(val);
+    await onOptionsChanged();
+  });
+
+  numDot?.addEventListener("input", async (e: Event) => {
+    let val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isNaN(val)) return;
+    const min = guaranteedScan ? 60 : 0;
+    val = Math.max(min, Math.min(100, val));
+    options.dotSize = val;
+    if (optDot) optDot.value = String(val);
+    await onOptionsChanged();
+  });
+
+  // White Portion Fill
+  optWhiteSize?.addEventListener("input", async (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    options.whiteDotSize = val;
+    if (numWhiteSize) numWhiteSize.value = String(val);
+    await onOptionsChanged();
+  });
+
+  numWhiteSize?.addEventListener("input", async (e: Event) => {
+    let val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isNaN(val)) return;
+    const min = guaranteedScan ? 60 : 0;
+    val = Math.max(min, Math.min(100, val));
+    options.whiteDotSize = val;
+    if (optWhiteSize) optWhiteSize.value = String(val);
+    await onOptionsChanged();
+  });
+
+  // Border Width
+  optBorder?.addEventListener("input", async (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    options.border = val;
+    if (numBorder) numBorder.value = String(val);
+    await onOptionsChanged();
+  });
+
+  numBorder?.addEventListener("input", async (e: Event) => {
+    let val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isNaN(val)) return;
+    const min = guaranteedScan ? 1 : 0;
+    val = Math.max(min, Math.min(20, val));
+    options.border = val;
+    if (optBorder) optBorder.value = String(val);
+    await onOptionsChanged();
+  });
+
+  // Module Curvature
+  optRound?.addEventListener("input", async (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    options.dotRoundness = val;
+    if (numRound) numRound.value = String(val);
+    await onOptionsChanged();
+  });
+
+  numRound?.addEventListener("input", async (e: Event) => {
+    let val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isNaN(val)) return;
+    val = Math.max(0, Math.min(50, val));
+    options.dotRoundness = val;
+    if (optRound) optRound.value = String(val);
+    await onOptionsChanged();
+  });
+
+  // Image Margin
+  optImageMargin?.addEventListener("input", async (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    options.imageMargin = val;
+    if (numImageMargin) numImageMargin.value = String(val);
+    await onOptionsChanged();
+  });
+
+  numImageMargin?.addEventListener("input", async (e: Event) => {
+    let val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isNaN(val)) return;
+    val = Math.max(0, Math.min(10, val));
+    options.imageMargin = val;
+    if (optImageMargin) optImageMargin.value = String(val);
+    await onOptionsChanged();
+  });
+
+  // Opacity
+  optOpacity?.addEventListener("input", async (e: Event) => {
+    const pct = parseInt((e.target as HTMLInputElement).value, 10);
+    options.bgOpacity = pct / 100;
+    if (valOpacity) valOpacity.textContent = `${pct}%`;
+    await onOptionsChanged();
+  });
+
+  optWhiteDots?.addEventListener("change", async (e: Event) => {
+    options.drawWhiteDots = (e.target as HTMLInputElement).checked;
+    await onOptionsChanged();
+  });
+
+  optLevel?.addEventListener("change", async (e: Event) => {
+    options.errorLevel = (e.target as HTMLSelectElement).value;
+    await onOptionsChanged();
+  });
+
+  // Image Mode
+  document.querySelectorAll('input[name="imageModeRadio"]').forEach((radio) => {
+    radio.addEventListener("change", async (e: Event) => {
+      options.imageMode = (e.target as HTMLInputElement).value;
+      await onOptionsChanged();
+    });
+  });
+
+  // Style Presets
+  document.querySelectorAll("[data-preset]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      document.querySelectorAll("[data-preset]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const presetName = btn.getAttribute("data-preset");
+      switch (presetName) {
+        case "dots":
+          options.dotStyle = "dots";
+          options.finderStyle = "dot";
+          options.dotRoundness = 50;
+          options.finderRoundness = 50;
+          options.dotSize = 90;
+          options.whiteDotSize = 90;
+          break;
+        case "fluid":
+          options.dotStyle = "classy";
+          options.finderStyle = "rounded";
+          options.dotRoundness = 40;
+          options.finderRoundness = 40;
+          options.dotSize = 90;
+          options.whiteDotSize = 90;
+          break;
+        case "tech":
+          options.dotStyle = "rounded";
+          options.finderStyle = "square";
+          options.dotRoundness = 20;
+          options.finderRoundness = 0;
+          options.dotSize = 90;
+          options.whiteDotSize = 90;
+          break;
+        case "standard":
+        default:
+          options.dotStyle = "square";
+          options.finderStyle = "square";
+          options.dotRoundness = 0;
+          options.finderRoundness = 0;
+          options.dotSize = 100;
+          options.whiteDotSize = 100;
+          break;
+      }
+
+      if (optDot) optDot.value = String(options.dotSize);
+      if (numDot) numDot.value = String(options.dotSize);
+      if (optWhiteSize) optWhiteSize.value = String(options.whiteDotSize);
+      if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
+      if (optRound) optRound.value = String(options.dotRoundness);
+      if (numRound) numRound.value = String(options.dotRoundness);
+
+      await onOptionsChanged();
+    });
+  });
+
+  // File Management
+  async function resetImageAsync() {
+    imageName = null;
+    clearImage("qr-image");
+    clearImage("qr-image-replace");
+    if (imagePreviewThumb) imagePreviewThumb.src = "";
+  }
+
+  async function applyLoadedImage(name: string, thumbSrc?: string) {
+    imageName = name;
+    if (imageNameText) imageNameText.textContent = name;
+    if (imageNameDisplay) imageNameDisplay.title = name;
+    if (thumbSrc && imagePreviewThumb) imagePreviewThumb.src = thumbSrc;
+
+    imageOptionsPanel?.classList.remove("d-none");
+    dropzone?.classList.add("d-none");
+    fileSelectedBox?.classList.remove("d-none");
+
+    if (guaranteedScan && optLevel) {
+      optLevel.value = "H";
+      optLevel.disabled = true;
+    }
+
+    if (generatedUrl) {
+      await renderAsync(generatedUrl);
+    }
+  }
+
+  async function handleImageFile(file: File) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      await resetImageAsync();
+      showError("File must be an image (PNG, JPG, SVG, WebP).");
+      return;
+    }
+
+    if (file.size > MaxImageBytes) {
+      await resetImageAsync();
+      showError("Image must be under 10 MB.");
+      return;
+    }
+
+    const jsError = await setImage(file);
+    if (jsError) {
+      await resetImageAsync();
+      showError(jsError);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => applyLoadedImage(file.name || "Embedded_Image.png", e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  fileInput?.addEventListener("change", () => {
+    if (fileInput.files && fileInput.files[0]) {
+      handleImageFile(fileInput.files[0]);
+    }
+  });
+
+  fileReplaceInput?.addEventListener("change", () => {
+    if (fileReplaceInput.files && fileReplaceInput.files[0]) {
+      handleImageFile(fileReplaceInput.files[0]);
+    }
+  });
+
+  // Paste image from clipboard anywhere on window
+  window.addEventListener("paste", async (e: ClipboardEvent) => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          clearError();
+          await handleImageFile(file);
+          break;
+        }
+      }
+    }
+  });
+
+  btnClearImage?.addEventListener("click", async () => {
+    clearError();
+    await resetImageAsync();
+    if (fileInput) fileInput.value = "";
+    if (fileReplaceInput) fileReplaceInput.value = "";
+    imageOptionsPanel?.classList.add("d-none");
+    fileSelectedBox?.classList.add("d-none");
+    dropzone?.classList.remove("d-none");
+    if (optLevel) optLevel.disabled = false;
+
+    if (generatedUrl) {
+      await renderAsync(generatedUrl);
+    }
+  });
+
+  // Dropzone Drag Events
+  dropzone?.addEventListener("dragenter", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("drag-over");
+  });
+
+  dropzone?.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.classList.add("drag-over");
+  });
+
+  dropzone?.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("drag-over");
+  });
+
+  dropzone?.addEventListener("drop", (e: DragEvent) => {
+    dropzone.classList.remove("drag-over");
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+      e.preventDefault();
+      handleImageFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  // Reset Options
+  btnReset?.addEventListener("click", async () => {
+    options = { ...DEFAULTS };
+    guaranteedScan = true;
+    if (toggleGuaranteedScan) toggleGuaranteedScan.checked = true;
+    applyScanModeSettings();
+
+    if (optFg) optFg.value = options.foreground;
+    if (lblFg) lblFg.textContent = options.foreground;
+    if (optBg) {
+      optBg.value = options.background;
+      optBg.disabled = false;
+    }
+    if (lblBg) lblBg.textContent = options.background;
+    lblBgContainer?.classList.remove("opacity-50");
+    if (optTrans) optTrans.checked = false;
+
+    if (optBorder) optBorder.value = String(options.border);
+    if (numBorder) numBorder.value = String(options.border);
+    if (optDot) optDot.value = String(options.dotSize);
+    if (numDot) numDot.value = String(options.dotSize);
+    if (optWhiteSize) optWhiteSize.value = String(options.whiteDotSize);
+    if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
+    if (optRound) optRound.value = String(options.dotRoundness);
+    if (numRound) numRound.value = String(options.dotRoundness);
+    if (optImageMargin) optImageMargin.value = String(options.imageMargin);
+    if (numImageMargin) numImageMargin.value = String(options.imageMargin);
+
+    if (optOpacity) optOpacity.value = "0";
+    if (valOpacity) valOpacity.textContent = "0%";
+    if (optWhiteDots) optWhiteDots.checked = true;
+
+    document.querySelectorAll("[data-preset]").forEach(b => b.classList.remove("active"));
+    document.querySelector('[data-preset="standard"]')?.classList.add("active");
+
+    const modeBg = document.getElementById("mode-background") as HTMLInputElement;
+    if (modeBg) modeBg.checked = true;
+
+    await onOptionsChanged();
+  });
+
+  // Download PNG with selected resolution
+  btnDownload?.addEventListener("click", () => {
+    const exportResolution = parseInt(exportSizeSelect?.value || "1024", 10) || 1024;
+    download("qrcode", "qr-image.png", exportResolution);
+  });
+
+  // Copy to Clipboard
+  btnCopy?.addEventListener("click", async () => {
+    try {
+      await copyToClipboard("qrcode");
+      if (copyBtnText) copyBtnText.textContent = "Copied!";
+      btnCopy.classList.replace("btn-outline-light", "btn-success");
+      setTimeout(() => {
+        if (copyBtnText) copyBtnText.textContent = "Copy";
+        btnCopy.classList.replace("btn-success", "btn-outline-light");
+      }, 2000);
+    } catch (err) {
+      console.error("Clipboard copy failed:", err);
+      showError("Could not copy to clipboard. Use Download instead.");
+    }
+  });
+
+  // Initial setup & render
+  applyScanModeSettings();
+  generateQRCode();
+</script>

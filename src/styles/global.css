@@ -168,27 +168,9 @@ code {
   transform: translateY(-1px);
 }
 
-/* Sample Image Chips */
-.sample-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background-color: rgba(255, 255, 255, 0.06);
-  color: #f1f5f9;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.sample-chip:hover {
-  background-color: rgba(99, 102, 241, 0.25);
-  border-color: rgba(129, 140, 248, 0.6);
-  color: #ffffff;
-  transform: translateY(-1px);
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
 }
 
 /* Color Picker Swatches */

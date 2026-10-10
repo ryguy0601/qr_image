@@ -1,6 +1,28 @@
 {
+  "name": "qr-image",
+  "version": "1.0.0",
+  "description": "High-contrast, scannable QR code generator with image embedding and live interactive controls built with Astro",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "keywords": [
+    "astro",
+    "qrcode",
+    "qr-code-generator",
+    "image-qrcode",
+    "canvas",
+    "scanner"
+  ],
+  "license": "GPL-3.0-or-later",
   "devDependencies": {
     "jsqr": "^1.4.0",
     "pngjs": "^7.0.0"
+  },
+  "dependencies": {
+    "astro": "^7.3.8"
   }
 }
