@@ -1,10 +1,4 @@
-let QRCode;
-let QRCodeModel;
-let QRErrorCorrectLevel;
-let QRMode;
-let getTypeNumber;
-
-(function () {
+// Core QR Code generation module
 	// Standard QR 8-bit Byte encoding using standard TextEncoder for UTF-8
 	function QR8bitByte(data) {
 		this.mode = QRMode.MODE_8BIT_BYTE;
@@ -575,7 +569,7 @@ let getTypeNumber;
 		return nType;
 	}
 
-	QRCode = function (el, vOption) {
+	function QRCode(el, vOption) {
 		this._htOption = {
 			width: 256,
 			height: 256,
@@ -595,7 +589,7 @@ let getTypeNumber;
 		if (this._htOption.text) {
 			this.makeCode(this._htOption.text);
 		}
-	};
+	}
 
 	QRCode.prototype.makeCode = function (sText) {
 		this._oQRCode = new QRCodeModel(_getTypeNumber(sText, this._htOption.correctLevel), this._htOption.correctLevel);
@@ -608,13 +602,11 @@ let getTypeNumber;
 	QRCode.getTypeNumber = _getTypeNumber;
 	QRCode.QRMode = QRMode;
 
-	QRErrorCorrectLevel = QRCode.CorrectLevel;
-	QRCodeModel = QRCode.QRCodeModel;
-	QRMode = QRCode.QRMode;
-	getTypeNumber = _getTypeNumber;
-})();
+	const getTypeNumber = _getTypeNumber;
 
-export { QRCode, QRCodeModel, QRErrorCorrectLevel, QRMode, getTypeNumber };
-export default QRCode;
+	export { QRCode, QRCodeModel, QRErrorCorrectLevel, QRMode, getTypeNumber };
+	export default QRCode;
+
+
 
 

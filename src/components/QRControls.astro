@@ -146,11 +146,11 @@
         <div class="d-flex justify-content-between align-items-center small text-white mb-1">
           <label for="opt-dot" class="mb-0">Dark Module Scale</label>
           <div class="d-flex align-items-center gap-1">
-            <input type="number" id="num-dot" class="num-input-box" min="60" max="100" value="90" />
+            <input type="number" id="num-dot" class="num-input-box" min="60" max="100" value="100" />
             <span class="text-white small fw-bold">%</span>
           </div>
         </div>
-        <input id="opt-dot" type="range" class="form-range" min="60" max="100" step="1" value="90" />
+        <input id="opt-dot" type="range" class="form-range" min="60" max="100" step="1" value="100" />
         <small class="text-secondary d-block mt-1" style="font-size: 0.74rem;">Size of dark code modules.</small>
       </div>
 
@@ -159,11 +159,11 @@
         <div class="d-flex justify-content-between align-items-center small text-white mb-1">
           <label for="opt-white-size" class="mb-0">White Portion Fill</label>
           <div class="d-flex align-items-center gap-1">
-            <input type="number" id="num-white-size" class="num-input-box" min="60" max="100" value="90" />
+            <input type="number" id="num-white-size" class="num-input-box" min="60" max="100" value="100" />
             <span class="text-white small fw-bold">%</span>
           </div>
         </div>
-        <input id="opt-white-size" type="range" class="form-range" min="60" max="100" step="1" value="90" />
+        <input id="opt-white-size" type="range" class="form-range" min="60" max="100" step="1" value="100" />
         <small class="text-secondary d-block mt-1" style="font-size: 0.74rem;">Coverage of pure white light modules.</small>
       </div>
 
@@ -180,17 +180,30 @@
         <small class="text-secondary d-block mt-1" style="font-size: 0.74rem;">Outer quiet zone padding (0 to 15 modules).</small>
       </div>
 
-      <!-- Corner Curvature with Slider and Number Input -->
+      <!-- Corner Eye Roundness with Slider and Number Input -->
+      <div class="col-sm-6">
+        <div class="d-flex justify-content-between align-items-center small text-white mb-1">
+          <label for="opt-finder-round" class="mb-0">Corner Eye Roundness</label>
+          <div class="d-flex align-items-center gap-1">
+            <input type="number" id="num-finder-round" class="num-input-box" min="0" max="100" value="100" />
+            <span class="text-white small fw-bold">%</span>
+          </div>
+        </div>
+        <input id="opt-finder-round" type="range" class="form-range" min="0" max="100" step="1" value="100" />
+        <small class="text-secondary d-block mt-1" style="font-size: 0.74rem;">Curvature of the 3 corner finder markers.</small>
+      </div>
+
+      <!-- Module Curvature with Slider and Number Input -->
       <div class="col-sm-6">
         <div class="d-flex justify-content-between align-items-center small text-white mb-1">
           <label for="opt-round" class="mb-0">Module Curvature</label>
           <div class="d-flex align-items-center gap-1">
-            <input type="number" id="num-round" class="num-input-box" min="0" max="50" value="0" />
+            <input type="number" id="num-round" class="num-input-box" min="0" max="100" value="0" />
             <span class="text-white small fw-bold">%</span>
           </div>
         </div>
-        <input id="opt-round" type="range" class="form-range" min="0" max="50" step="1" value="0" />
-        <small class="text-secondary d-block mt-1" style="font-size: 0.74rem;">Smooths module corners.</small>
+        <input id="opt-round" type="range" class="form-range" min="0" max="100" step="1" value="0" />
+        <small class="text-secondary d-block mt-1" style="font-size: 0.74rem;">Smooths data module corners.</small>
       </div>
 
       <div class="col-12 pt-1">

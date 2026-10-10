@@ -1,8 +1,8 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import QRControls from '../components/QRControls.astro';
-import QRPreview from '../components/QRPreview.astro';
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import QRControls from "../components/QRControls.astro";
+import QRPreview from "../components/QRPreview.astro";
 ---
 
 <Layout title="QRImage Generator - Custom QR Codes with Images">
@@ -28,8 +28,8 @@ import QRPreview from '../components/QRPreview.astro';
     clearImage,
     download,
     copyToClipboard,
-    DEFAULTS
-  } from '../scripts/qrRenderer.js';
+    DEFAULTS,
+  } from "../scripts/qrRenderer.js";
 
   const MaxImageBytes = 10 * 1024 * 1024;
 
@@ -40,71 +40,139 @@ import QRPreview from '../components/QRPreview.astro';
 
   // DOM Elements
   const urlInput = document.getElementById("qr-url") as HTMLInputElement;
-  const btnClearUrl = document.getElementById("btn-clear-url") as HTMLButtonElement;
-  const btnGenerate = document.getElementById("btn-generate") as HTMLButtonElement;
+  const btnClearUrl = document.getElementById(
+    "btn-clear-url",
+  ) as HTMLButtonElement;
+  const btnGenerate = document.getElementById(
+    "btn-generate",
+  ) as HTMLButtonElement;
   const btnReset = document.getElementById("btn-reset") as HTMLButtonElement;
-  const btnDownload = document.getElementById("btn-download") as HTMLButtonElement;
-  const exportSizeSelect = document.getElementById("export-size-select") as HTMLSelectElement;
+  const btnDownload = document.getElementById(
+    "btn-download",
+  ) as HTMLButtonElement;
+  const exportSizeSelect = document.getElementById(
+    "export-size-select",
+  ) as HTMLSelectElement;
   const btnCopy = document.getElementById("btn-copy") as HTMLButtonElement;
   const copyBtnText = document.getElementById("copy-btn-text") as HTMLElement;
   const qrContainer = document.getElementById("qrcode") as HTMLElement;
-  const previewPlaceholder = document.getElementById("preview-placeholder") as HTMLElement;
-  const cardFooterTarget = document.getElementById("card-footer-target") as HTMLElement;
-  const targetDisplay = document.getElementById("target-display") as HTMLElement;
+  const previewPlaceholder = document.getElementById(
+    "preview-placeholder",
+  ) as HTMLElement;
+  const cardFooterTarget = document.getElementById(
+    "card-footer-target",
+  ) as HTMLElement;
+  const targetDisplay = document.getElementById(
+    "target-display",
+  ) as HTMLElement;
   const errorAlert = document.getElementById("error-alert") as HTMLElement;
   const errorMessage = document.getElementById("error-message") as HTMLElement;
-  const contrastWarning = document.getElementById("contrast-warning") as HTMLElement;
-  const contrastWarningText = document.getElementById("contrast-warning-text") as HTMLElement;
+  const contrastWarning = document.getElementById(
+    "contrast-warning",
+  ) as HTMLElement;
+  const contrastWarningText = document.getElementById(
+    "contrast-warning-text",
+  ) as HTMLElement;
 
   // Guaranteed Scan Toggle Elements
-  const toggleGuaranteedScan = document.getElementById("toggle-guaranteed-scan") as HTMLInputElement;
-  const scanStatusBadge = document.getElementById("scan-status-badge") as HTMLElement;
-  const headerScanBadge = document.getElementById("header-scan-badge") as HTMLElement;
-  const scanStatusDesc = document.getElementById("scan-status-desc") as HTMLElement;
-  const scanShieldIcon = document.getElementById("scan-shield-icon") as HTMLElement;
-  const rangeBoundHint = document.getElementById("range-bound-hint") as HTMLElement;
+  const toggleGuaranteedScan = document.getElementById(
+    "toggle-guaranteed-scan",
+  ) as HTMLInputElement;
+  const scanStatusBadge = document.getElementById(
+    "scan-status-badge",
+  ) as HTMLElement;
+  const headerScanBadge = document.getElementById(
+    "header-scan-badge",
+  ) as HTMLElement;
+  const scanStatusDesc = document.getElementById(
+    "scan-status-desc",
+  ) as HTMLElement;
+  const scanShieldIcon = document.getElementById(
+    "scan-shield-icon",
+  ) as HTMLElement;
+  const rangeBoundHint = document.getElementById(
+    "range-bound-hint",
+  ) as HTMLElement;
 
   // File Elements
   const fileInput = document.getElementById("qr-image") as HTMLInputElement;
-  const fileReplaceInput = document.getElementById("qr-image-replace") as HTMLInputElement;
+  const fileReplaceInput = document.getElementById(
+    "qr-image-replace",
+  ) as HTMLInputElement;
   const dropzone = document.getElementById("dropzone-empty") as HTMLElement;
-  const fileSelectedBox = document.getElementById("file-selected-box") as HTMLElement;
-  const imagePreviewThumb = document.getElementById("image-preview-thumb") as HTMLImageElement;
-  const imageNameText = document.getElementById("image-name-text") as HTMLElement;
-  const imageNameDisplay = document.getElementById("image-name-display") as HTMLElement;
-  const btnClearImage = document.getElementById("btn-clear-image") as HTMLButtonElement;
-  const imageOptionsPanel = document.getElementById("image-options-panel") as HTMLElement;
+  const fileSelectedBox = document.getElementById(
+    "file-selected-box",
+  ) as HTMLElement;
+  const imagePreviewThumb = document.getElementById(
+    "image-preview-thumb",
+  ) as HTMLImageElement;
+  const imageNameText = document.getElementById(
+    "image-name-text",
+  ) as HTMLElement;
+  const imageNameDisplay = document.getElementById(
+    "image-name-display",
+  ) as HTMLElement;
+  const btnClearImage = document.getElementById(
+    "btn-clear-image",
+  ) as HTMLButtonElement;
+  const imageOptionsPanel = document.getElementById(
+    "image-options-panel",
+  ) as HTMLElement;
 
   // Controls
   const optFg = document.getElementById("opt-fg") as HTMLInputElement;
   const optBg = document.getElementById("opt-bg") as HTMLInputElement;
   const lblFg = document.getElementById("lbl-fg") as HTMLElement;
   const lblBg = document.getElementById("lbl-bg") as HTMLElement;
-  const lblBgContainer = document.getElementById("lbl-bg-container") as HTMLElement;
+  const lblBgContainer = document.getElementById(
+    "lbl-bg-container",
+  ) as HTMLElement;
   const optTrans = document.getElementById("opt-trans") as HTMLInputElement;
 
   // Sliders & Number inputs
   const optDot = document.getElementById("opt-dot") as HTMLInputElement;
   const numDot = document.getElementById("num-dot") as HTMLInputElement;
-  const optWhiteSize = document.getElementById("opt-white-size") as HTMLInputElement;
-  const numWhiteSize = document.getElementById("num-white-size") as HTMLInputElement;
+  const optWhiteSize = document.getElementById(
+    "opt-white-size",
+  ) as HTMLInputElement;
+  const numWhiteSize = document.getElementById(
+    "num-white-size",
+  ) as HTMLInputElement;
   const optBorder = document.getElementById("opt-border") as HTMLInputElement;
   const numBorder = document.getElementById("num-border") as HTMLInputElement;
   const optRound = document.getElementById("opt-round") as HTMLInputElement;
   const numRound = document.getElementById("num-round") as HTMLInputElement;
-  const optImageMargin = document.getElementById("opt-image-margin") as HTMLInputElement;
-  const numImageMargin = document.getElementById("num-image-margin") as HTMLInputElement;
+  const optFinderRound = document.getElementById(
+    "opt-finder-round",
+  ) as HTMLInputElement;
+  const numFinderRound = document.getElementById(
+    "num-finder-round",
+  ) as HTMLInputElement;
+  const optImageMargin = document.getElementById(
+    "opt-image-margin",
+  ) as HTMLInputElement;
+  const numImageMargin = document.getElementById(
+    "num-image-margin",
+  ) as HTMLInputElement;
 
   const optOpacity = document.getElementById("opt-opacity") as HTMLInputElement;
   const valOpacity = document.getElementById("val-opacity") as HTMLElement;
-  const optWhiteDots = document.getElementById("opt-white-dots") as HTMLInputElement;
+  const optWhiteDots = document.getElementById(
+    "opt-white-dots",
+  ) as HTMLInputElement;
   const optLevel = document.getElementById("opt-level") as HTMLSelectElement;
 
   function normalize(val: string) {
     if (!val) return null;
     val = val.trim();
     if (!val) return null;
-    if (val.includes("://") || /^mailto:/i.test(val) || /^tel:/i.test(val) || /^WIFI:/i.test(val)) return val;
+    if (
+      val.includes("://") ||
+      /^mailto:/i.test(val) ||
+      /^tel:/i.test(val) ||
+      /^WIFI:/i.test(val)
+    )
+      return val;
     if (!val.includes(" ") && val.includes(".")) return `https://${val}`;
     return val;
   }
@@ -115,7 +183,9 @@ import QRPreview from '../components/QRPreview.astro';
       return;
     }
     if (options.foreground.toLowerCase() === options.background.toLowerCase()) {
-      if (contrastWarningText) contrastWarningText.textContent = "Code color and background color are identical.";
+      if (contrastWarningText)
+        contrastWarningText.textContent =
+          "Code color and background color are identical.";
       contrastWarning?.classList.remove("d-none");
     } else {
       contrastWarning?.classList.add("d-none");
@@ -179,29 +249,33 @@ import QRPreview from '../components/QRPreview.astro';
         scanStatusBadge.textContent = "Protected (Safe Bounds)";
       }
       if (headerScanBadge) {
-        headerScanBadge.className = "badge badge-scannable text-xs fw-semibold px-2 py-1 ms-2";
-        headerScanBadge.innerHTML = '<i class="fa fa-shield me-1"></i>Guaranteed Scan ON';
+        headerScanBadge.className =
+          "badge badge-scannable text-xs fw-semibold px-2 py-1 ms-2";
+        headerScanBadge.innerHTML =
+          '<i class="fa fa-shield me-1"></i>Guaranteed Scan ON';
       }
-      if (scanShieldIcon) scanShieldIcon.className = "fa fa-shield text-success fs-5";
+      if (scanShieldIcon)
+        scanShieldIcon.className = "fa fa-shield text-success fs-5";
       if (scanStatusDesc) {
-        scanStatusDesc.textContent = "Guarantees camera scannability with solid white portions and safe module sizing. Turn OFF for complete custom freedom to set any numbers.";
+        scanStatusDesc.textContent =
+          "Guarantees camera scannability with solid white portions and safe module sizing. Turn OFF for complete custom freedom to set any numbers.";
       }
       if (rangeBoundHint) rangeBoundHint.textContent = "Safe Mode: 60% – 100%";
 
       if (optDot) optDot.min = "60";
       if (numDot) numDot.min = "60";
       if (options.dotSize < 60) {
-        options.dotSize = 90;
-        if (optDot) optDot.value = "90";
-        if (numDot) numDot.value = "90";
+        options.dotSize = imageName ? 60 : 100;
+        if (optDot) optDot.value = String(options.dotSize);
+        if (numDot) numDot.value = String(options.dotSize);
       }
 
       if (optWhiteSize) optWhiteSize.min = "60";
       if (numWhiteSize) numWhiteSize.min = "60";
       if (options.whiteDotSize < 60) {
-        options.whiteDotSize = 90;
-        if (optWhiteSize) optWhiteSize.value = "90";
-        if (numWhiteSize) numWhiteSize.value = "90";
+        options.whiteDotSize = imageName ? 60 : 100;
+        if (optWhiteSize) optWhiteSize.value = String(options.whiteDotSize);
+        if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
       }
 
       if (optBorder) optBorder.min = "1";
@@ -222,14 +296,19 @@ import QRPreview from '../components/QRPreview.astro';
         scanStatusBadge.textContent = "Custom Freedom (Any Number)";
       }
       if (headerScanBadge) {
-        headerScanBadge.className = "badge badge-custom text-xs fw-semibold px-2 py-1 ms-2";
-        headerScanBadge.innerHTML = '<i class="fa fa-unlock me-1"></i>Custom Freedom';
+        headerScanBadge.className =
+          "badge badge-custom text-xs fw-semibold px-2 py-1 ms-2";
+        headerScanBadge.innerHTML =
+          '<i class="fa fa-unlock me-1"></i>Custom Freedom';
       }
-      if (scanShieldIcon) scanShieldIcon.className = "fa fa-unlock text-warning fs-5";
+      if (scanShieldIcon)
+        scanShieldIcon.className = "fa fa-unlock text-warning fs-5";
       if (scanStatusDesc) {
-        scanStatusDesc.textContent = "Full manual control: Set module scales and borders to whatever custom number you want (even 0 border or non-standard art sizes).";
+        scanStatusDesc.textContent =
+          "Full manual control: Set module scales and borders to whatever custom number you want (even 0 border or non-standard art sizes).";
       }
-      if (rangeBoundHint) rangeBoundHint.textContent = "Unlocked: 0% – 100% (Any Number)";
+      if (rangeBoundHint)
+        rangeBoundHint.textContent = "Unlocked: 0% – 100% (Any Number)";
 
       if (optDot) optDot.min = "0";
       if (numDot) numDot.min = "0";
@@ -367,9 +446,26 @@ import QRPreview from '../components/QRPreview.astro';
   numRound?.addEventListener("input", async (e: Event) => {
     let val = parseInt((e.target as HTMLInputElement).value, 10);
     if (isNaN(val)) return;
-    val = Math.max(0, Math.min(50, val));
+    val = Math.max(0, Math.min(100, val));
     options.dotRoundness = val;
     if (optRound) optRound.value = String(val);
+    await onOptionsChanged();
+  });
+
+  // Corner Eye Roundness
+  optFinderRound?.addEventListener("input", async (e: Event) => {
+    const val = parseInt((e.target as HTMLInputElement).value, 10);
+    options.finderRoundness = val;
+    if (numFinderRound) numFinderRound.value = String(val);
+    await onOptionsChanged();
+  });
+
+  numFinderRound?.addEventListener("input", async (e: Event) => {
+    let val = parseInt((e.target as HTMLInputElement).value, 10);
+    if (isNaN(val)) return;
+    val = Math.max(0, Math.min(100, val));
+    options.finderRoundness = val;
+    if (optFinderRound) optFinderRound.value = String(val);
     await onOptionsChanged();
   });
 
@@ -419,7 +515,9 @@ import QRPreview from '../components/QRPreview.astro';
   // Style Presets
   document.querySelectorAll("[data-preset]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      document.querySelectorAll("[data-preset]").forEach(b => b.classList.remove("active"));
+      document
+        .querySelectorAll("[data-preset]")
+        .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
       const presetName = btn.getAttribute("data-preset");
@@ -427,23 +525,23 @@ import QRPreview from '../components/QRPreview.astro';
         case "dots":
           options.dotStyle = "dots";
           options.finderStyle = "dot";
-          options.dotRoundness = 50;
-          options.finderRoundness = 50;
+          options.dotRoundness = 100;
+          options.finderRoundness = 100;
           options.dotSize = 90;
           options.whiteDotSize = 90;
           break;
         case "fluid":
           options.dotStyle = "classy";
           options.finderStyle = "rounded";
-          options.dotRoundness = 40;
-          options.finderRoundness = 40;
+          options.dotRoundness = 70;
+          options.finderRoundness = 70;
           options.dotSize = 90;
           options.whiteDotSize = 90;
           break;
         case "tech":
           options.dotStyle = "rounded";
           options.finderStyle = "square";
-          options.dotRoundness = 20;
+          options.dotRoundness = 30;
           options.finderRoundness = 0;
           options.dotSize = 90;
           options.whiteDotSize = 90;
@@ -453,9 +551,9 @@ import QRPreview from '../components/QRPreview.astro';
           options.dotStyle = "square";
           options.finderStyle = "square";
           options.dotRoundness = 0;
-          options.finderRoundness = 0;
-          options.dotSize = 100;
-          options.whiteDotSize = 100;
+          options.finderRoundness = imageName ? 0 : 100;
+          options.dotSize = imageName ? (guaranteedScan ? 60 : 0) : 100;
+          options.whiteDotSize = imageName ? (guaranteedScan ? 60 : 0) : 100;
           break;
       }
 
@@ -465,6 +563,8 @@ import QRPreview from '../components/QRPreview.astro';
       if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
       if (optRound) optRound.value = String(options.dotRoundness);
       if (numRound) numRound.value = String(options.dotRoundness);
+      if (optFinderRound) optFinderRound.value = String(options.finderRoundness);
+      if (numFinderRound) numFinderRound.value = String(options.finderRoundness);
 
       await onOptionsChanged();
     });
@@ -487,6 +587,19 @@ import QRPreview from '../components/QRPreview.astro';
     imageOptionsPanel?.classList.remove("d-none");
     dropzone?.classList.add("d-none");
     fileSelectedBox?.classList.remove("d-none");
+
+    // Only set to minimum when images are uploaded
+    const minDot = guaranteedScan ? 60 : 0;
+    options.dotSize = minDot;
+    options.whiteDotSize = minDot;
+    options.finderRoundness = 0; // minimum corner roundness
+
+    if (optDot) optDot.value = String(options.dotSize);
+    if (numDot) numDot.value = String(options.dotSize);
+    if (optWhiteSize) optWhiteSize.value = String(options.whiteDotSize);
+    if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
+    if (optFinderRound) optFinderRound.value = String(options.finderRoundness);
+    if (numFinderRound) numFinderRound.value = String(options.finderRoundness);
 
     if (guaranteedScan && optLevel) {
       optLevel.value = "H";
@@ -521,7 +634,11 @@ import QRPreview from '../components/QRPreview.astro';
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => applyLoadedImage(file.name || "Embedded_Image.png", e.target?.result as string);
+    reader.onload = (e) =>
+      applyLoadedImage(
+        file.name || "Embedded_Image.png",
+        e.target?.result as string,
+      );
     reader.readAsDataURL(file);
   }
 
@@ -564,6 +681,18 @@ import QRPreview from '../components/QRPreview.astro';
     dropzone?.classList.remove("d-none");
     if (optLevel) optLevel.disabled = false;
 
+    // Otherwise full scale
+    options.dotSize = 100;
+    options.whiteDotSize = 100;
+    options.finderRoundness = 100; // full scale corner roundness
+
+    if (optDot) optDot.value = String(options.dotSize);
+    if (numDot) numDot.value = String(options.dotSize);
+    if (optWhiteSize) optWhiteSize.value = String(options.whiteDotSize);
+    if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
+    if (optFinderRound) optFinderRound.value = String(options.finderRoundness);
+    if (numFinderRound) numFinderRound.value = String(options.finderRoundness);
+
     if (generatedUrl) {
       await renderAsync(generatedUrl);
     }
@@ -596,6 +725,16 @@ import QRPreview from '../components/QRPreview.astro';
   // Reset Options
   btnReset?.addEventListener("click", async () => {
     options = { ...DEFAULTS };
+    if (imageName) {
+      const minDot = guaranteedScan ? 60 : 0;
+      options.dotSize = minDot;
+      options.whiteDotSize = minDot;
+      options.finderRoundness = 0;
+    } else {
+      options.dotSize = 100;
+      options.whiteDotSize = 100;
+      options.finderRoundness = 100;
+    }
     guaranteedScan = true;
     if (toggleGuaranteedScan) toggleGuaranteedScan.checked = true;
     applyScanModeSettings();
@@ -616,6 +755,8 @@ import QRPreview from '../components/QRPreview.astro';
     if (numDot) numDot.value = String(options.dotSize);
     if (optWhiteSize) optWhiteSize.value = String(options.whiteDotSize);
     if (numWhiteSize) numWhiteSize.value = String(options.whiteDotSize);
+    if (optFinderRound) optFinderRound.value = String(options.finderRoundness);
+    if (numFinderRound) numFinderRound.value = String(options.finderRoundness);
     if (optRound) optRound.value = String(options.dotRoundness);
     if (numRound) numRound.value = String(options.dotRoundness);
     if (optImageMargin) optImageMargin.value = String(options.imageMargin);
@@ -625,10 +766,14 @@ import QRPreview from '../components/QRPreview.astro';
     if (valOpacity) valOpacity.textContent = "0%";
     if (optWhiteDots) optWhiteDots.checked = true;
 
-    document.querySelectorAll("[data-preset]").forEach(b => b.classList.remove("active"));
+    document
+      .querySelectorAll("[data-preset]")
+      .forEach((b) => b.classList.remove("active"));
     document.querySelector('[data-preset="standard"]')?.classList.add("active");
 
-    const modeBg = document.getElementById("mode-background") as HTMLInputElement;
+    const modeBg = document.getElementById(
+      "mode-background",
+    ) as HTMLInputElement;
     if (modeBg) modeBg.checked = true;
 
     await onOptionsChanged();
@@ -636,7 +781,8 @@ import QRPreview from '../components/QRPreview.astro';
 
   // Download PNG with selected resolution
   btnDownload?.addEventListener("click", () => {
-    const exportResolution = parseInt(exportSizeSelect?.value || "1024", 10) || 1024;
+    const exportResolution =
+      parseInt(exportSizeSelect?.value || "1024", 10) || 1024;
     download("qrcode", "qr-image.png", exportResolution);
   });
 

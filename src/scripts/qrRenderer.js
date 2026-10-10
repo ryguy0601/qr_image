@@ -5,12 +5,12 @@ export const DEFAULTS = {
 	border: 4,                  // Quiet zone modules around the QR code
 	imageMargin: 0,             // Margin (in modules) indented inside the QR code
 	imageMode: "background",    // "background" (mosaic art) or "center" (logo badge)
-	dotSize: 90,                // 60 to 100 (% of full cell size for dark modules)
-	whiteDotSize: 90,           // 60 to 100 (% of full cell size for white modules)
-	dotRoundness: 0,            // 0 to 50
+	dotSize: 100,               // Default full scale when no image
+	whiteDotSize: 100,          // Default full scale when no image
+	dotRoundness: 0,            // 0 to 100 (%)
 	dotStyle: "square",         // "square", "rounded", "dots", "classy"
 	finderStyle: "square",      // "square", "rounded", "dot"
-	finderRoundness: 0,
+	finderRoundness: 100,       // Default full scale when no image (0 to 100%)
 	errorLevel: "H",            // "H" (30% recovery) recommended for images
 	foreground: "#000000",
 	background: "#ffffff",
@@ -43,10 +43,10 @@ export function normalize(opts) {
 		imageMode: ["background", "center"].includes(o.imageMode) ? o.imageMode : "background",
 		dotSize: clamp(o.dotSize, 0, 100, DEFAULTS.dotSize),
 		whiteDotSize: clamp(o.whiteDotSize !== undefined ? o.whiteDotSize : o.dotSize, 0, 100, DEFAULTS.whiteDotSize),
-		dotRoundness: clamp(o.dotRoundness, 0, 50, DEFAULTS.dotRoundness) / 50,
+		dotRoundness: clamp(o.dotRoundness, 0, 100, DEFAULTS.dotRoundness) / 100,
 		dotStyle: ["square", "rounded", "dots", "classy"].includes(o.dotStyle) ? o.dotStyle : DEFAULTS.dotStyle,
 		finderStyle: ["square", "rounded", "dot"].includes(o.finderStyle) ? o.finderStyle : DEFAULTS.finderStyle,
-		finderRoundness: clamp(o.finderRoundness, 0, 50, DEFAULTS.finderRoundness) / 50,
+		finderRoundness: clamp(o.finderRoundness !== undefined ? o.finderRoundness : DEFAULTS.finderRoundness, 0, 100, DEFAULTS.finderRoundness) / 100,
 		errorLevel: ["L", "M", "Q", "H"].includes(o.errorLevel) ? o.errorLevel : DEFAULTS.errorLevel,
 		foreground: color(o.foreground, DEFAULTS.foreground),
 		background: color(o.background, DEFAULTS.background),
@@ -119,13 +119,19 @@ function isFinderZone(row, col, count) {
 
 function drawFinder(ctx, x, y, cell, style, roundness, fgColor, bgColor) {
 	const size = 7 * cell;
-	let rRatio = roundness;
-	if (style === "rounded" && rRatio === 0) rRatio = 0.35;
-	else if (style === "dot" && rRatio === 0) rRatio = 0.5;
+	let rRatio = typeof roundness === "number" && !isNaN(roundness) ? roundness : 0;
+	if (rRatio > 1) {
+		rRatio = rRatio / 100;
+	}
+	if (roundness === undefined) {
+		if (style === "rounded") rRatio = 0.5;
+		else if (style === "dot") rRatio = 1.0;
+	}
+	rRatio = Math.max(0, Math.min(1, rRatio));
 
-	const outerR = size * rRatio * 0.5;
-	const middleR = 5 * cell * rRatio * 0.5;
-	const innerR = 3 * cell * rRatio * 0.5;
+	const outerR = (size / 2) * rRatio;
+	const middleR = ((5 * cell) / 2) * rRatio;
+	const innerR = ((3 * cell) / 2) * rRatio;
 
 	// 1. Outer 7x7 dark box
 	ctx.fillStyle = fgColor;
@@ -159,7 +165,10 @@ function drawModule(ctx, col, row, cell, dotSize, style, roundness) {
 	if (style === "dots") {
 		ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
 	} else {
-		const cornerRadius = (Math.min(width, height) / 2) * (roundness > 0 ? roundness : 0);
+		let rRatio = typeof roundness === "number" && !isNaN(roundness) ? roundness : 0;
+		if (rRatio > 1) rRatio = rRatio / 100;
+		rRatio = Math.max(0, Math.min(1, rRatio));
+		const cornerRadius = radius * rRatio;
 		addRoundRect(ctx, x, y, width, height, cornerRadius);
 	}
 	ctx.fill();
@@ -180,9 +189,16 @@ function drawCoverImage(ctx, image, dx, dy, dSize) {
 }
 
 function buildModel(text, level) {
-	const ecLevel = QRErrorCorrectLevel ? QRErrorCorrectLevel[level] : QRCode.CorrectLevel[level];
-	const typeNum = getTypeNumber ? getTypeNumber(text, ecLevel) : QRCode.getTypeNumber(text, ecLevel);
-	const model = new QRCodeModel(typeNum, ecLevel);
+	const ecLevel = (QRErrorCorrectLevel && QRErrorCorrectLevel[level] !== undefined)
+		? QRErrorCorrectLevel[level]
+		: (QRCode && QRCode.CorrectLevel ? QRCode.CorrectLevel[level] : 2);
+	const getTN = getTypeNumber || (QRCode && QRCode.getTypeNumber);
+	const typeNum = getTN ? getTN(text, ecLevel) : 1;
+	const ModelClass = QRCodeModel || (QRCode && QRCode.QRCodeModel);
+	if (!ModelClass) {
+		throw new Error("QRCodeModel constructor is not available.");
+	}
+	const model = new ModelClass(typeNum, ecLevel);
 	model.addData(text);
 	model.make();
 	return model;
@@ -238,23 +254,15 @@ function draw(model, canvas, options) {
 
 	ctx.imageSmoothingEnabled = false;
 
-	// 3. Draw Finder Patterns (Corners) with 100% solid white backing & quiet separator
+	// 3. Draw Finder Patterns (Corners) directly over image/background so corners don't get cut off
 	const finderLocations = [
-		{ row: 0, col: 0, startR: 0, startC: 0 },
-		{ row: 0, col: qrLength - 7, startR: 0, startC: qrLength - 8 },
-		{ row: qrLength - 7, col: 0, startR: qrLength - 8, startC: 0 }
+		{ row: 0, col: 0 },
+		{ row: 0, col: qrLength - 7 },
+		{ row: qrLength - 7, col: 0 }
 	];
 
 	for (const f of finderLocations) {
-		const cornerX = (f.startC + border) * cell;
-		const cornerY = (f.startR + border) * cell;
-		const cornerSize = 8 * cell;
-
-		// SOLID WHITE 8x8 backing (covers separator so scanner reads 1:1:3:1:1 without noise)
-		ctx.fillStyle = whiteColor;
-		ctx.fillRect(cornerX, cornerY, cornerSize, cornerSize);
-
-		// 7x7 finder pattern
+		// Draw 7x7 finder pattern directly over the image so corners don't get cut off
 		drawFinder(
 			ctx,
 			(f.col + border) * cell,

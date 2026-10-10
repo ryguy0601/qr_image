@@ -9,8 +9,14 @@ A modern, high-contrast QR code generator built with **[Astro](https://astro.bui
 - **Built with Astro**: Component-driven architecture with fast HMR dev server and static site generation (`SSG`).
 - **Guaranteed Scan Protection**: Ensures smartphone cameras can scan the QR code reliably by maintaining high-contrast module separation, solid quiet zones, and Level H (30%) error correction.
 - **Custom Freedom Mode**: Unlock full manual control to customize module sizing, curvature, border widths (0 to 15 modules), and styling down to the exact percentage.
+- **Adaptive Sizing on Upload**:
+  - **No Image Loaded**: Module scales and corner roundness default to **full scale** (`100%`) for crisp, solid standard QR codes.
+  - **Image Uploaded**: Automatically snaps module scales and corner roundness to the **minimum** (`60%` in Safe Mode / `0%` in Freedom Mode) to maximize artwork visibility behind the code.
+  - **Image Cleared**: Instantly restores sliders back to **full scale** (`100%`).
+- **Full Image Visibility (No Corner Cutoffs)**:
+  - Corner finder patterns are rendered directly over background artwork without opaque white blocks, preserving image details all the way to the corners.
 - **Embedded Artwork & Logos**:
-  - **Background Art**: Subtle mosaic styling overlaying the full code area with customizable dimming/tinting.
+  - **Background Art**: Subtle mosaic styling overlaying the full code area with customizable dimming/tinting and inset margins.
   - **Center Logo**: Badged logo placement with rounded corners, drop shadows, and automatic safe zone calculation.
 - **Direct Clipboard Integration**:
   - **Paste to Embed**: Press `Ctrl+V` anywhere on the page to immediately embed an image from your clipboard.
@@ -61,8 +67,7 @@ A modern, high-contrast QR code generator built with **[Astro](https://astro.bui
 ```text
 qr_image/
 ├── public/                 # Static assets (favicons, public files)
-│   ├── favicon.svg
-│   └── images/
+│   └── favicon.svg
 ├── src/
 │   ├── components/         # Modular Astro UI components
 │   │   ├── Header.astro    # Top navigation & reset action
@@ -115,19 +120,32 @@ qr_image/
 
 ## 🎛️ Controls & Configuration
 
-| Control | Description | Range |
+| Control | Description | Range / Options |
 | :--- | :--- | :--- |
 | **Guaranteed Scan Mode** | Locks module size & border to camera-safe minimums | ON / OFF |
-| **Dark Module Scale** | Adjusts the footprint of dark data modules | 0% – 100% |
-| **White Portion Fill** | Adjusts coverage of white spacer modules | 0% – 100% |
+| **Dark Module Scale** | Adjusts the footprint of dark data modules (snaps to minimum on image upload) | 60% – 100% (or 0% – 100% in Freedom mode) |
+| **White Portion Fill** | Adjusts coverage of white spacer modules (snaps to minimum on image upload) | 60% – 100% (or 0% – 100% in Freedom mode) |
+| **Corner Eye Roundness** | Curvature of the 3 corner finder markers (snaps to minimum on image upload) | 0% – 100% |
+| **Module Curvature** | Rounds the corners of modules for fluid or rounded styles | 0% – 100% |
 | **Border Width** | Outer quiet zone padding around the QR code | 0 – 15 modules |
-| **Module Curvature** | Rounds the corners of modules for fluid styles | 0% – 50% |
-| **Error Correction** | Redundancy level (`L` 7%, `M` 15%, `Q` 25%, `H` 30%) | L, M, Q, H |
+| **Embedding Style** | Choose between Background Art (mosaic) or Center Logo badge | Background / Center |
+| **Background Dimming / Tint** | Darkens/tints artwork to maximize code contrast | 0% – 70% |
+| **Image Inset Margin** | Insets image artwork inside the QR matrix boundary | 0 – 10 modules |
+| **Error Correction** | Reed-Solomon redundancy level (`L` 7%, `M` 15%, `Q` 25%, `H` 30%) | L, M, Q, H |
 | **Color Pickers** | Custom foreground and background colors | Hex codes |
 | **Transparent Canvas** | Renders background transparent for PNG overlays | Toggle |
+| **Draw White Modules** | Toggles drawing of high-contrast white spacer modules | Toggle |
+
+---
+
+## 🙏 Credits & Acknowledgements
+
+- **Original Project Creator**: **[Hugh Chen](https://github.com/HughChen)** — Created the original [qr_image](https://github.com/HughChen/qr_image) project and image-embedding application concept.
+- **QR Engine**: **[davidshimjs](https://github.com/davidshimjs/qrcodejs)** — Original JavaScript QR code matrix generator library and algorithms.
+- **Framework**: **[Astro](https://astro.build/)** — The modern static site and component-driven web framework powering this application.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [GNU General Public License v3.0](LICENSE).
+This project is licensed under the [GNU General Public License v3.0](LICENSE) — preserving the original open-source license by Hugh Chen.
