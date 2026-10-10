@@ -96,6 +96,7 @@ qr_image/
 | `npm run dev` / `npm start` | Launches the Astro dev server at `http://localhost:4321/` with HMR |
 | `npm run build` | Builds optimized static output into `dist/` |
 | `npm run preview` | Previews the build output locally |
+| `npm run deploy` | Builds and deploys static site directly to the `gh-pages` branch |
 
 ---
 
