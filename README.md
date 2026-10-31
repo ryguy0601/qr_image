@@ -2,6 +2,17 @@
 
 A modern, high-contrast QR code generator built with **[Astro](https://astro.build/)** that produces beautiful, camera-scannable QR codes with embedded images, custom artwork, and full styling flexibility.
 
+![QRImage Generator Preview](demoPics/pic1.png)
+
+<p align="center">
+  <img src="demoPics/pic2.png" alt="Polka Dots QR Style" width="31%" />
+  <img src="demoPics/pic3.png" alt="Fluid Curves QR Style" width="31%" />
+  <img src="demoPics/pic4.png" alt="Tech Rounded QR Style" width="31%" />
+</p>
+<p align="center">
+  <em>High-Contrast Aesthetic Styles: Polka Dots, Fluid Curves, and Tech Rounded with Real-Time Guaranteed Scanning</em>
+</p>
+
 ---
 
 ## ✨ Features
